@@ -17,10 +17,30 @@ import {
   CalendarCheck2,
   ArrowLeft,
   Sparkles,
+  Star,
+  Send,
+  ThumbsUp,
+  Heart,
+  X,
 } from 'lucide-react'
 import type { Activity, ActivityType, ActivityRegistration } from '../../shared/types'
 import { cn } from '@/lib/utils'
 import { useAppStore } from '@/stores/appStore'
+
+interface FeedbackFormData {
+  rating: number
+  contentPracticality: number
+  wouldRecommend: boolean | null
+  comment: string
+}
+
+interface FeedbackState {
+  showModal: boolean
+  activity: Activity | null
+  submitting: boolean
+  showThankYou: boolean
+  hasSubmitted: Set<string>
+}
 
 const typeConfig: Record<
   ActivityType,
@@ -90,6 +110,81 @@ export default function MyActivities() {
   const [items, setItems] = useState<MyActivityItem[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [feedbackState, setFeedbackState] = useState<FeedbackState>({
+    showModal: false,
+    activity: null,
+    submitting: false,
+    showThankYou: false,
+    hasSubmitted: new Set<string>(),
+  })
+  const [feedbackForm, setFeedbackForm] = useState<FeedbackFormData>({
+    rating: 0,
+    contentPracticality: 0,
+    wouldRecommend: null,
+    comment: '',
+  })
+
+  const openFeedbackModal = (activity: Activity) => {
+    setFeedbackForm({
+      rating: 0,
+      contentPracticality: 0,
+      wouldRecommend: null,
+      comment: '',
+    })
+    setFeedbackState({
+      ...feedbackState,
+      showModal: true,
+      activity,
+      showThankYou: false,
+    })
+  }
+
+  const closeFeedbackModal = () => {
+    setFeedbackState({
+      ...feedbackState,
+      showModal: false,
+      activity: null,
+      showThankYou: false,
+    })
+  }
+
+  const handleSubmitFeedback = async () => {
+    if (!user || !feedbackState.activity) return
+    if (feedbackForm.rating === 0 || feedbackForm.contentPracticality === 0 || feedbackForm.wouldRecommend === null) {
+      alert('请完成所有评分项')
+      return
+    }
+
+    setFeedbackState({ ...feedbackState, submitting: true })
+    try {
+      const res = await fetch(`/api/activities/${feedbackState.activity.id}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          rating: feedbackForm.rating,
+          contentPracticality: feedbackForm.contentPracticality,
+          wouldRecommend: feedbackForm.wouldRecommend,
+          comment: feedbackForm.comment,
+        }),
+      })
+      const json = await res.json()
+      if (json.success) {
+        setFeedbackState({
+          ...feedbackState,
+          submitting: false,
+          showThankYou: true,
+          hasSubmitted: new Set(feedbackState.hasSubmitted).add(feedbackState.activity.id),
+        })
+      } else {
+        alert(json.error || '提交失败')
+        setFeedbackState({ ...feedbackState, submitting: false })
+      }
+    } catch (e) {
+      alert('提交失败，请稍后重试')
+      setFeedbackState({ ...feedbackState, submitting: false })
+    }
+  }
 
   useEffect(() => {
     if (!user) return
@@ -405,6 +500,23 @@ export default function MyActivities() {
                             <CalendarX className="w-4 h-4" strokeWidth={1.8} />
                             {submitting ? '处理中...' : '取消报名'}
                           </button>
+                        ) : registration.status === 'attended' && !feedbackState.hasSubmitted.has(activity.id) ? (
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              openFeedbackModal(activity)
+                            }}
+                            className="flex-1 lg:w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-sunset-400 to-rose-500 text-white text-sm font-medium hover:shadow-lg hover:shadow-rose-200 transition-all"
+                          >
+                            <Star className="w-4 h-4" />
+                            提交反馈
+                          </button>
+                        ) : registration.status === 'attended' && feedbackState.hasSubmitted.has(activity.id) ? (
+                          <div className="flex-1 lg:w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-sage-100 text-sage-600 text-sm font-medium">
+                            <CheckCircle className="w-4 h-4" />
+                            已评价
+                          </div>
                         ) : (
                           <div className="flex-1 lg:w-full" />
                         )}
@@ -419,6 +531,184 @@ export default function MyActivities() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {feedbackState.showModal && feedbackState.activity && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden">
+            {feedbackState.showThankYou ? (
+              <div className="p-8 md:p-10 text-center">
+                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-sage-400 to-lavender-400 flex items-center justify-center">
+                  <Heart className="w-10 h-10 text-white" />
+                </div>
+                <h2 className="text-2xl font-bold text-clay-900 mb-2">感谢您的反馈！</h2>
+                <p className="text-clay-600 mb-6">您的意见对我们非常重要，我们会持续改进活动质量。</p>
+                <div className="flex items-center justify-center gap-3 mb-6">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className={cn(
+                        'w-6 h-6',
+                        star <= feedbackForm.rating
+                          ? 'text-sunset-400 fill-sunset-400'
+                          : 'text-clay-200',
+                      )}
+                    />
+                  ))}
+                </div>
+                <button
+                  onClick={closeFeedbackModal}
+                  className="px-8 py-3 rounded-xl bg-gradient-to-r from-lavender-500 to-rose-500 text-white font-medium hover:shadow-lg hover:shadow-lavender-200 transition-all"
+                >
+                  完成
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="p-6 md:p-8 border-b border-clay-100">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-clay-900 mb-1">活动反馈</h2>
+                      <p className="text-sm text-clay-500">{feedbackState.activity.title}</p>
+                    </div>
+                    <button
+                      onClick={closeFeedbackModal}
+                      className="p-2 rounded-xl hover:bg-clay-50 transition-colors"
+                    >
+                      <X className="w-5 h-5 text-clay-500" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-6 md:p-8 space-y-6 max-h-[60vh] overflow-y-auto">
+                  <div>
+                    <label className="block text-sm font-medium text-clay-800 mb-3">
+                      总体满意度 <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          onClick={() => setFeedbackForm({ ...feedbackForm, rating: star })}
+                          className="p-1 transition-transform hover:scale-110"
+                        >
+                          <Star
+                            className={cn(
+                              'w-8 h-8 transition-all',
+                              star <= feedbackForm.rating
+                                ? 'text-sunset-400 fill-sunset-400'
+                                : 'text-clay-200 hover:text-sunset-300',
+                            )}
+                          />
+                        </button>
+                      ))}
+                      <span className="ml-3 text-sm text-clay-500">
+                        {feedbackForm.rating > 0 ? `${feedbackForm.rating} 分` : '请评分'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-clay-800 mb-3">
+                      内容实用性 <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          onClick={() => setFeedbackForm({ ...feedbackForm, contentPracticality: star })}
+                          className="p-1 transition-transform hover:scale-110"
+                        >
+                          <Star
+                            className={cn(
+                              'w-8 h-8 transition-all',
+                              star <= feedbackForm.contentPracticality
+                                ? 'text-lavender-500 fill-lavender-500'
+                                : 'text-clay-200 hover:text-lavender-300',
+                            )}
+                          />
+                        </button>
+                      ))}
+                      <span className="ml-3 text-sm text-clay-500">
+                        {feedbackForm.contentPracticality > 0 ? `${feedbackForm.contentPracticality} 分` : '请评分'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-clay-800 mb-3">
+                      是否愿意推荐给同事 <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setFeedbackForm({ ...feedbackForm, wouldRecommend: true })}
+                        className={cn(
+                          'flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 transition-all',
+                          feedbackForm.wouldRecommend === true
+                            ? 'border-sage-500 bg-sage-50 text-sage-700'
+                            : 'border-clay-200 text-clay-600 hover:border-sage-300',
+                        )}
+                      >
+                        <ThumbsUp className="w-5 h-5" />
+                        愿意
+                      </button>
+                      <button
+                        onClick={() => setFeedbackForm({ ...feedbackForm, wouldRecommend: false })}
+                        className={cn(
+                          'flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 transition-all',
+                          feedbackForm.wouldRecommend === false
+                            ? 'border-rose-500 bg-rose-50 text-rose-700'
+                            : 'border-clay-200 text-clay-600 hover:border-rose-300',
+                        )}
+                      >
+                        <XCircle className="w-5 h-5" />
+                        不愿意
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-clay-800 mb-3">
+                      建议和意见 <span className="text-clay-400">(选填)</span>
+                    </label>
+                    <textarea
+                      value={feedbackForm.comment}
+                      onChange={(e) => setFeedbackForm({ ...feedbackForm, comment: e.target.value })}
+                      placeholder="请分享您对本次活动的感受和建议..."
+                      rows={4}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-clay-200 text-clay-800 placeholder-clay-400 focus:border-lavender-400 focus:ring-0 outline-none resize-none transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-6 md:p-8 border-t border-clay-100 bg-gradient-to-b from-clay-50/50 to-transparent">
+                  <div className="flex gap-3">
+                    <button
+                      onClick={closeFeedbackModal}
+                      className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-clay-200 text-clay-600 font-medium hover:bg-clay-50 transition-all"
+                    >
+                      取消
+                    </button>
+                    <button
+                      onClick={handleSubmitFeedback}
+                      disabled={feedbackState.submitting || feedbackForm.rating === 0 || feedbackForm.contentPracticality === 0 || feedbackForm.wouldRecommend === null}
+                      className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-lavender-500 to-rose-500 text-white font-medium hover:shadow-lg hover:shadow-lavender-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {feedbackState.submitting ? (
+                        '提交中...'
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4" />
+                          提交反馈
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -17,6 +17,7 @@ import Admin from '@/pages/Admin'
 import AdminDashboard from '@/pages/AdminDashboard'
 import AdminActivities from '@/pages/AdminActivities'
 import AdminFeedback from '@/pages/AdminFeedback'
+import AdminCareQueue from '@/pages/AdminCareQueue'
 
 const router = createBrowserRouter([
   {
@@ -57,6 +58,7 @@ const router = createBrowserRouter([
           { index: true, element: <Admin /> },
           { path: 'dashboard', element: <AdminDashboard /> },
           { path: 'activities', element: <AdminActivities /> },
+          { path: 'care-queue', element: <AdminCareQueue /> },
           { path: 'feedback', element: <AdminFeedback /> },
         ],
       },

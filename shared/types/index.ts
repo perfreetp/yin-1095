@@ -11,6 +11,19 @@ export interface SleepAnswer {
   value: number
 }
 
+export interface CareProgramRecommendation {
+  id: string
+  title: string
+  reason: string
+}
+
+export interface SleepIssue {
+  questionId: string
+  label: string
+  score: number
+  description: string
+}
+
 export interface SleepAssessment {
   id: string
   userId?: string
@@ -21,12 +34,21 @@ export interface SleepAssessment {
   totalScore: number
   severity: 'mild' | 'moderate' | 'severe'
   suggestions: string[]
+  topIssues?: SleepIssue[]
+  recommendedPrograms?: CareProgramRecommendation[]
 }
 
 export interface SymptomScore {
   symptomId: string
   name: string
   score: number
+}
+
+export interface TopSymptom {
+  symptomId: string
+  name: string
+  score: number
+  weight: number
 }
 
 export interface MenopauseAssessment {
@@ -36,8 +58,11 @@ export interface MenopauseAssessment {
   submittedAt: string
   symptoms: SymptomScore[]
   totalScore: number
+  weightedScore: number
   severity: 'mild' | 'moderate' | 'severe'
   suggestions: string[]
+  topSymptoms: TopSymptom[]
+  recommendedPrograms: CareProgramRecommendation[]
 }
 
 export type ActivityType = 'lecture' | 'workshop' | 'consultation' | 'course'
@@ -100,6 +125,60 @@ export interface CareProgram {
   benefits: string[]
   eligibilityCriteria: string[]
   privacyCommitment: string
+  serviceProcess: string[]
+  expectedResponseTime: string
+}
+
+export type ContactPreference = 'phone' | 'message' | 'email' | 'none'
+export type PreferredTime = 'weekday_morning' | 'weekday_afternoon' | 'weekday_evening' | 'weekend'
+export type CareApplyStatus = 'pending' | 'processing' | 'completed'
+
+export interface CareChannelApply {
+  id: string
+  programId: string
+  userId: string
+  appliedAt: string
+  status: CareApplyStatus
+  reason?: string
+  contactPreference: ContactPreference
+  preferredTime: PreferredTime[]
+  additionalNotes: string
+  anonymousCode: string
+  processingNotes: string
+  updatedAt: string
+  symptomTags?: string[]
+}
+
+export interface EffectTracking {
+  id: string
+  applyId: string
+  trackingDate: string
+  symptomSeverity: number
+  sleepQuality: number
+  energyLevel: number
+  moodScore: number
+  notes: string
+}
+
+export interface ExerciseCompletion {
+  id: string
+  userId: string
+  exerciseId: string
+  completedAt: string
+  duration: number
+  feeling: 'better' | 'same' | 'worse'
+  notes?: string
+}
+
+export interface ActivityFeedback {
+  id: string
+  activityId: string
+  userId: string
+  rating: number
+  contentPracticality?: number
+  content: string
+  submittedAt: string
+  wouldRecommend: boolean
 }
 
 export type FeedbackCategory = 'satisfaction' | 'suggestion' | 'experience'

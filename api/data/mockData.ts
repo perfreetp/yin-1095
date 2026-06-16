@@ -12,6 +12,11 @@ import type {
   SleepTip,
   SleepAnswer,
   SymptomScore,
+  ExerciseCompletion,
+  ActivityFeedback,
+  CareChannelApply,
+  TopSymptom,
+  CareProgramRecommendation,
 } from '../../shared/types/index.js'
 
 function generateUUID(): string {
@@ -165,6 +170,8 @@ function generateSleepAssessment(department: string, severity: 'mild' | 'moderat
     totalScore,
     severity,
     suggestions: sleepSuggestions[severity],
+    topIssues: [],
+    recommendedPrograms: [],
   }
 }
 
@@ -249,6 +256,27 @@ function generateMenopauseAssessment(department: string): MenopauseAssessment {
   if (totalScore < min) totalScore = min
   if (totalScore > max) totalScore = max
 
+  const weightedScore = totalScore * 1.2
+
+  const topSymptoms: TopSymptom[] = symptoms
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+    .map(s => ({
+      symptomId: s.symptomId,
+      name: s.name,
+      score: s.score,
+      weight: 1.0,
+    }))
+
+  const recommendedPrograms: CareProgramRecommendation[] = []
+  if (severity !== 'mild') {
+    recommendedPrograms.push({
+      id: 'program-comprehensive',
+      title: '🌸 综合健康管理套餐',
+      reason: '针对多种症状困扰提供全方位关怀',
+    })
+  }
+
   return {
     id: generateUUID(),
     anonymousId: generateUUID(),
@@ -256,8 +284,11 @@ function generateMenopauseAssessment(department: string): MenopauseAssessment {
     submittedAt: formatDate(baseDate),
     symptoms,
     totalScore,
+    weightedScore,
     severity,
     suggestions: menopauseSuggestions[severity],
+    topSymptoms,
+    recommendedPrograms,
   }
 }
 
@@ -641,6 +672,13 @@ const carePrograms: CareProgram[] = [
       '当前未使用处方类安眠药物（或经医生同意）',
     ],
     privacyCommitment: '所有参与信息严格保密，仅项目管理专员可访问，不向任何第三方（包括公司、直系领导）披露参与情况和个人数据。',
+    serviceProcess: [
+      '提交申请，获取专属匿名编号',
+      '健康服务专员1个工作日内初审',
+      '3个工作日内匹配睡眠专家并预约首次评估',
+      '8周个性化改善方案执行与跟踪',
+    ],
+    expectedResponseTime: '1个工作日内初审，3个工作日内完成匹配',
   },
   {
     id: generateUUID(),
@@ -662,6 +700,13 @@ const carePrograms: CareProgram[] = [
       '愿意配合饮食和生活方式调整',
     ],
     privacyCommitment: '参与信息加密存储，仅专业团队成员可接触，所有评估报告仅供个人查看，不纳入公司人事档案。',
+    serviceProcess: [
+      '提交申请，获取专属匿名编号',
+      '健康服务专员1个工作日内初审',
+      '3个工作日内安排多维度健康评估',
+      '制定个性化疲劳改善方案并开始执行',
+    ],
+    expectedResponseTime: '1个工作日内初审，3个工作日内安排评估',
   },
   {
     id: generateUUID(),
@@ -683,6 +728,13 @@ const carePrograms: CareProgram[] = [
       '能够稳定参与咨询过程',
     ],
     privacyCommitment: '所有咨询内容严格遵循心理咨询伦理保密原则，不向任何人透露（包括公司、家属），只有在法律要求的极端情况下才可能打破保密。',
+    serviceProcess: [
+      '提交申请，获取专属匿名编号',
+      '心理服务专员1个工作日内初审评估',
+      '3个工作日内匹配心理咨询师并确认首次咨询时间',
+      '开启咨询之旅，专业陪伴支持',
+    ],
+    expectedResponseTime: '1个工作日内初审，3个工作日内匹配咨询师',
   },
   {
     id: generateUUID(),
@@ -705,6 +757,13 @@ const carePrograms: CareProgram[] = [
       '签署健康管理知情同意书',
     ],
     privacyCommitment: '所有健康数据独立存储，与公司HR系统完全隔离。仅你的健康管理师和相关专业顾问在工作需要时可访问，访问均留痕可审计。',
+    serviceProcess: [
+      '提交申请，获取专属匿名编号',
+      '健康管理专员1个工作日内初审',
+      '3个工作日内安排全面健康评估与团队会诊',
+      '定制3个月健康管理方案并启动执行',
+    ],
+    expectedResponseTime: '1个工作日内初审，3个工作日内安排全面评估',
   },
 ]
 
@@ -804,6 +863,99 @@ const sleepTips: SleepTip[] = [
   { id: generateUUID(), title: '何时需要就医', content: '以下情况建议就诊：每周3次以上失眠、持续超过1个月；白天严重影响工作生活；打鼾严重+白天极度嗜睡（可能睡眠呼吸暂停）；伴明显情绪问题。', category: '医学建议' },
 ]
 
+function generateExerciseCompletions(): ExerciseCompletion[] {
+  const completions: ExerciseCompletion[] = []
+  const employeeUsers = users.filter((u) => u.role === 'employee')
+
+  for (const user of employeeUsers.slice(0, 80)) {
+    const completionCount = Math.floor(Math.random() * 30) + 5
+    for (let i = 0; i < completionCount; i++) {
+      const exercise = pickRandom(exercises)
+      const baseDate = randomDate(new Date('2026-01-01'), new Date())
+      const feelings: Array<'better' | 'same' | 'worse'> = ['better', 'better', 'better', 'same', 'worse']
+
+      completions.push({
+        id: generateUUID(),
+        userId: user.id,
+        exerciseId: exercise.id,
+        completedAt: formatDate(baseDate),
+        duration: exercise.duration,
+        feeling: pickRandom(feelings),
+        notes: Math.random() > 0.7 ? '今天感觉很放松' : undefined,
+      })
+    }
+  }
+
+  return completions
+}
+
+function generateActivityFeedbacks(): ActivityFeedback[] {
+  const feedbacks: ActivityFeedback[] = []
+  const attendedRegistrations = activityRegistrations.filter((r) => r.status === 'attended')
+
+  for (const reg of attendedRegistrations.slice(0, 60)) {
+    if (Math.random() > 0.6) continue
+
+    feedbacks.push({
+      id: generateUUID(),
+      activityId: reg.activityId,
+      userId: reg.userId,
+      rating: Math.floor(Math.random() * 3) + 3,
+      content: Math.random() > 0.5
+        ? '活动内容很实用，学到了很多'
+        : '讲师很专业，希望以后多办类似活动',
+      submittedAt: formatDate(randomDate(new Date('2026-02-01'), new Date())),
+      wouldRecommend: Math.random() > 0.2,
+    })
+  }
+
+  return feedbacks
+}
+
+function generateCareChannelApplies(): CareChannelApply[] {
+  const applies: CareChannelApply[] = []
+  const employeeUsers = users.filter((u) => u.role === 'employee')
+  const statuses: Array<'pending' | 'processing' | 'completed'> = ['pending', 'processing', 'completed', 'completed', 'completed']
+  const contactPreferences: Array<'phone' | 'message' | 'email' | 'none'> = ['phone', 'message', 'email']
+  const preferredTimes: Array<'weekday_morning' | 'weekday_afternoon' | 'weekday_evening' | 'weekend'> = [
+    'weekday_morning',
+    'weekday_afternoon',
+    'weekday_evening',
+    'weekend',
+  ]
+
+  for (let i = 0; i < 40; i++) {
+    const user = pickRandom(employeeUsers)
+    const program = pickRandom(carePrograms)
+    const appliedDate = randomDate(new Date('2026-02-01'), new Date())
+    const status = pickRandom(statuses)
+    const updatedDate = new Date(appliedDate)
+    updatedDate.setDate(updatedDate.getDate() + Math.floor(Math.random() * 14))
+
+    applies.push({
+      id: generateUUID(),
+      programId: program.id,
+      userId: user.id,
+      appliedAt: formatDate(appliedDate),
+      status,
+      reason: '最近睡眠质量不好，希望得到帮助',
+      contactPreference: pickRandom(contactPreferences),
+      preferredTime: [pickRandom(preferredTimes)],
+      additionalNotes: '',
+      anonymousCode: `ANON-${generateUUID().slice(0, 8).toUpperCase()}`,
+      processingNotes: status !== 'pending' ? '已安排首次评估' : '',
+      updatedAt: formatDate(updatedDate),
+      symptomTags: ['失眠', '焦虑'],
+    })
+  }
+
+  return applies
+}
+
+const exerciseCompletions = generateExerciseCompletions()
+const activityFeedbacks = generateActivityFeedbacks()
+const careChannelApplies = generateCareChannelApplies()
+
 export const mockData = {
   users,
   departments: departmentList,
@@ -816,6 +968,9 @@ export const mockData = {
   carePrograms,
   feedbacks,
   sleepTips,
+  exerciseCompletions,
+  activityFeedbacks,
+  careChannelApplies,
 }
 
 export default mockData

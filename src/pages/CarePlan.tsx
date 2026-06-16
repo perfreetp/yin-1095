@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Sun,
   Wind,
   Brain,
   ScanLine,
   Play,
+  Pause,
+  X,
   Clock,
   CheckCircle2,
   Circle,
@@ -17,9 +19,13 @@ import {
   CalendarDays,
   Home as HomeIcon,
   Building2,
+  Trophy,
+  Award,
+  Flame,
 } from 'lucide-react'
 import type { Exercise, SleepTip, ExerciseCategory } from '../../shared/types'
 import { cn } from '@/lib/utils'
+import { useAppStore } from '@/stores/appStore'
 
 type TabKey = 'exercises' | 'weekend' | 'sleep-tips'
 type ExerciseFilter = 'all' | ExerciseCategory
@@ -151,7 +157,21 @@ const sleepCategoryMap: Record<string, string[]> = {
   home: ['作息规律', '环境准备', '饮食注意', '睡前仪式', '认知行为', '情绪管理', '工具辅助', '医学建议'],
 }
 
+interface ExerciseSession {
+  exercise: Exercise
+  currentStep: number
+  timeRemaining: number
+  isPaused: boolean
+  totalDuration: number
+}
+
+interface CompletionResult {
+  streakDays: number
+  newBadge: { type: string; name: string } | null
+}
+
 export default function CarePlan() {
+  const { user } = useAppStore()
   const [activeTab, setActiveTab] = useState<TabKey>('exercises')
   const [exerciseFilter, setExerciseFilter] = useState<ExerciseFilter>('all')
   const [exercises, setExercises] = useState<Exercise[]>([])
@@ -162,6 +182,12 @@ export default function CarePlan() {
   const [groupedTips, setGroupedTips] = useState<Record<string, SleepTip[]>>({})
   const [checkedTips, setCheckedTips] = useState<Record<string, boolean>>({})
   const [scene, setScene] = useState<SceneKey>('home')
+
+  const [exerciseSession, setExerciseSession] = useState<ExerciseSession | null>(null)
+  const [showCompletionModal, setShowCompletionModal] = useState(false)
+  const [completionResult, setCompletionResult] = useState<CompletionResult | null>(null)
+  const [submittingCompletion, setSubmittingCompletion] = useState(false)
+  const timerRef = useRef<number | null>(null)
 
   useEffect(() => {
     const saved = localStorage.getItem('sleep-tips-checked')
@@ -229,6 +255,124 @@ export default function CarePlan() {
 
   const handlePlay = (id: string) => {
     setIsPlaying(isPlaying === id ? null : id)
+  }
+
+  const startExercise = (exercise: Exercise) => {
+    const stepDuration = Math.max(30, Math.floor((exercise.duration * 60) / exercise.steps.length))
+    setExerciseSession({
+      exercise,
+      currentStep: 0,
+      timeRemaining: stepDuration,
+      isPaused: false,
+      totalDuration: exercise.duration * 60,
+    })
+    setExpandedId(null)
+  }
+
+  const exitExercise = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+      timerRef.current = null
+    }
+    setExerciseSession(null)
+  }
+
+  const togglePause = () => {
+    if (!exerciseSession) return
+    setExerciseSession((prev) =>
+      prev ? { ...prev, isPaused: !prev.isPaused } : null,
+    )
+  }
+
+  const completeExercise = async () => {
+    if (!exerciseSession || !user) return
+
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+      timerRef.current = null
+    }
+
+    setSubmittingCompletion(true)
+    try {
+      const res = await fetch('/api/care-plan/exercise-complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          exerciseId: exerciseSession.exercise.id,
+          duration: exerciseSession.exercise.duration,
+          completedAt: new Date().toISOString(),
+          feeling: 'better',
+        }),
+      })
+      const json = await res.json()
+      if (json.success) {
+        setCompletionResult({
+          streakDays: json.data.streakDays,
+          newBadge: json.data.newBadge,
+        })
+        setExerciseSession(null)
+        setShowCompletionModal(true)
+      }
+    } catch (e) {
+      console.error('Failed to complete exercise', e)
+      alert('记录练习失败，请稍后重试')
+      setExerciseSession(null)
+    } finally {
+      setSubmittingCompletion(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!exerciseSession || exerciseSession.isPaused) {
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+      }
+      return
+    }
+
+    timerRef.current = window.setInterval(() => {
+      setExerciseSession((prev) => {
+        if (!prev) return null
+
+        if (prev.timeRemaining > 0) {
+          return { ...prev, timeRemaining: prev.timeRemaining - 1 }
+        } else {
+          const stepDuration = Math.max(30, Math.floor((prev.exercise.duration * 60) / prev.exercise.steps.length))
+          const nextStep = prev.currentStep + 1
+
+          if (nextStep >= prev.exercise.steps.length) {
+            return prev
+          }
+
+          return {
+            ...prev,
+            currentStep: nextStep,
+            timeRemaining: stepDuration,
+          }
+        }
+      })
+    }, 1000)
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+      }
+    }
+  }, [exerciseSession?.isPaused, exerciseSession?.currentStep])
+
+  useEffect(() => {
+    if (exerciseSession && exerciseSession.currentStep >= exerciseSession.exercise.steps.length - 1 && exerciseSession.timeRemaining <= 0) {
+      completeExercise()
+    }
+  }, [exerciseSession?.currentStep, exerciseSession?.timeRemaining])
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
   }
 
   const getGreeting = () => {
@@ -448,6 +592,13 @@ export default function CarePlan() {
                                 <span>约 {ex.duration} 分钟 · {ex.steps.length} 个步骤</span>
                               </div>
                             </div>
+                            <button
+                              onClick={() => startExercise(ex)}
+                              className="w-full py-3 rounded-xl bg-gradient-to-r from-rose-500 to-lavender-500 text-white text-sm font-medium hover:shadow-lg hover:shadow-rose-200/60 transition-all flex items-center justify-center gap-2"
+                            >
+                              <Play className="w-4 h-4" fill="currentColor" strokeWidth={2} />
+                              开始练习
+                            </button>
                             <button
                               onClick={() => setExpandedId(null)}
                               className="w-full py-3 rounded-xl border border-clay-200 text-clay-600 text-sm font-medium hover:bg-clay-50 transition-colors"
@@ -740,6 +891,172 @@ export default function CarePlan() {
                 )
               })}
             </div>
+          </div>
+        </div>
+      )}
+
+      {exerciseSession && (
+        <div className="fixed inset-0 z-50 bg-gradient-to-br from-rose-50 via-warm-50 to-lavender-50 flex flex-col items-center justify-center p-6">
+          <button
+            onClick={exitExercise}
+            className="absolute top-6 right-6 w-12 h-12 rounded-full bg-white/80 backdrop-blur flex items-center justify-center text-clay-600 hover:bg-white transition-colors shadow-lg"
+          >
+            <X className="w-6 h-6" strokeWidth={2} />
+          </button>
+
+          <div className="w-full max-w-lg text-center">
+            <div className="mb-8">
+              <span
+                className={cn(
+                  'inline-block px-4 py-1.5 rounded-full text-sm font-medium border mb-4',
+                  categoryConfig[exerciseSession.exercise.category].bg,
+                  categoryConfig[exerciseSession.exercise.category].color,
+                  categoryConfig[exerciseSession.exercise.category].border,
+                )}
+              >
+                {categoryConfig[exerciseSession.exercise.category].label}
+              </span>
+              <h2 className="text-3xl font-bold text-clay-900 mb-3">
+                {exerciseSession.exercise.title}
+              </h2>
+              <p className="text-clay-600">
+                步骤 {exerciseSession.currentStep + 1} / {exerciseSession.exercise.steps.length}
+              </p>
+            </div>
+
+            <div className="relative w-64 h-64 mx-auto mb-8">
+              <div
+                className={cn(
+                  'absolute inset-0 rounded-full bg-gradient-to-br shadow-2xl breathing',
+                  categoryConfig[exerciseSession.exercise.category].gradient,
+                )}
+              />
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <div className="text-5xl font-bold text-white mb-1">
+                  {formatTime(exerciseSession.timeRemaining)}
+                </div>
+                <div className="text-white/80 text-sm">
+                  {exerciseSession.isPaused ? '已暂停' : '深呼吸'}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 mb-8 border border-white shadow-lg">
+              <p className="text-lg text-clay-700 leading-relaxed">
+                {exerciseSession.exercise.steps[exerciseSession.currentStep]}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-center gap-4">
+              <button
+                onClick={togglePause}
+                className="w-16 h-16 rounded-full bg-white shadow-lg flex items-center justify-center text-clay-700 hover:scale-105 transition-transform"
+              >
+                {exerciseSession.isPaused ? (
+                  <Play className="w-7 h-7 ml-1" fill="currentColor" strokeWidth={2} />
+                ) : (
+                  <Pause className="w-7 h-7" fill="currentColor" strokeWidth={2} />
+                )}
+              </button>
+              <button
+                onClick={completeExercise}
+                disabled={submittingCompletion}
+                className="px-8 py-4 rounded-full bg-gradient-to-r from-rose-500 to-lavender-500 text-white font-medium shadow-lg shadow-rose-200/60 hover:scale-105 transition-transform disabled:opacity-60 flex items-center gap-2"
+              >
+                <CheckCircle2 className="w-5 h-5" strokeWidth={2} />
+                {submittingCompletion ? '记录中...' : '完成练习'}
+              </button>
+            </div>
+
+            <div className="mt-8 flex items-center justify-center gap-2">
+              {exerciseSession.exercise.steps.map((_, idx) => (
+                <div
+                  key={idx}
+                  className={cn(
+                    'w-2 h-2 rounded-full transition-all duration-300',
+                    idx < exerciseSession.currentStep
+                      ? 'bg-sage-400'
+                      : idx === exerciseSession.currentStep
+                        ? 'w-6 bg-rose-500'
+                        : 'bg-clay-200',
+                  )}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCompletionModal && completionResult && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-6">
+          <div className="bg-white rounded-3xl max-w-md w-full p-8 text-center shadow-2xl animate-bounce-in">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-sage-200 to-sage-300 flex items-center justify-center shadow-lg">
+              <CheckCircle2 className="w-10 h-10 text-white" strokeWidth={2.5} />
+            </div>
+
+            <h2 className="text-2xl font-bold text-clay-900 mb-3">
+              练习完成！
+            </h2>
+            <p className="text-clay-600 mb-6">
+              做得很好，你又向健康迈进了一步
+            </p>
+
+            <div className="flex items-center justify-center gap-6 mb-6 p-4 bg-gradient-to-r from-rose-50 to-lavender-50 rounded-2xl">
+              <div className="flex items-center gap-2">
+                <Flame className="w-5 h-5 text-rose-500" />
+                <div className="text-left">
+                  <div className="text-2xl font-bold text-clay-900">
+                    {completionResult.streakDays}
+                  </div>
+                  <div className="text-xs text-clay-500">连续天数</div>
+                </div>
+              </div>
+              <div className="w-px h-12 bg-clay-200" />
+              <div className="flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-sunset-500" />
+                <div className="text-left">
+                  <div className="text-2xl font-bold text-clay-900">
+                    +{completionResult.streakDays >= 7 ? 10 : completionResult.streakDays >= 3 ? 5 : 2}
+                  </div>
+                  <div className="text-xs text-clay-500">健康积分</div>
+                </div>
+              </div>
+            </div>
+
+            {completionResult.newBadge && (
+              <div className="mb-6 p-4 bg-gradient-to-r from-sunset-50 to-rose-50 rounded-2xl border border-sunset-200">
+                <div className="flex items-center justify-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-sunset-300 to-rose-400 flex items-center justify-center shadow-md">
+                    <Award className="w-6 h-6 text-white" strokeWidth={2} />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-sm font-bold text-sunset-600 mb-0.5">
+                      🎉 获得新徽章
+                    </div>
+                    <div className="text-lg font-bold text-clay-900">
+                      {completionResult.newBadge.name}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="text-sm text-clay-500 mb-6">
+              {completionResult.streakDays >= 30
+                ? '太厉害了！你已经坚持了30天，这是一个了不起的成就！'
+                : completionResult.streakDays >= 7
+                  ? '太棒了！连续7天坚持，你的毅力令人钦佩！'
+                  : completionResult.streakDays >= 3
+                    ? '很好的开始！继续保持，7天徽章在向你招手！'
+                    : '今天也是美好的一天，明天继续加油！'}
+            </div>
+
+            <button
+              onClick={() => setShowCompletionModal(false)}
+              className="w-full py-4 rounded-xl bg-gradient-to-r from-rose-500 to-lavender-500 text-white font-medium hover:shadow-lg hover:shadow-rose-200/60 transition-all"
+            >
+              太棒了！
+            </button>
           </div>
         </div>
       )}

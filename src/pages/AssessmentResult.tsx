@@ -4,13 +4,15 @@ import {
   Shield, ArrowLeft, RotateCcw, Moon, Flower2, Lightbulb,
   Clock, BookOpen, Heart, Activity, Calendar, ArrowRight,
   HandHeart, Sparkles, Leaf, Target, Coffee, AlertTriangle,
+  Flame, Zap, Droplets,
 } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend,
+  ReferenceDot,
 } from 'recharts'
 import { cn } from '@/lib/utils'
-import type { SleepAssessment, MenopauseAssessment, CareProgram, SleepAnswer, SymptomScore } from '../../shared/types'
+import type { SleepAssessment, MenopauseAssessment, CareProgram, SleepAnswer, SymptomScore, TopSymptom, SleepIssue, CareProgramRecommendation } from '../../shared/types'
 
 type ResultData = (SleepAssessment & { type: 'sleep' }) | (MenopauseAssessment & { type: 'menopause' })
 
@@ -63,6 +65,12 @@ const sleepQuestionLabels: Record<string, string> = {
 
 const sleepColors = ['#AD8AC0', '#C9B1D4', '#E8B4B8', '#D99196', '#C77076', '#E89A4E', '#F2B880', '#84A97C']
 
+const symptomTagColors = [
+  { bg: 'bg-rose-100', text: 'text-rose-600', border: 'border-rose-200', icon: Flame },
+  { bg: 'bg-lavender-100', text: 'text-lavender-600', border: 'border-lavender-200', icon: Zap },
+  { bg: 'bg-sage-100', text: 'text-sage-600', border: 'border-sage-200', icon: Droplets },
+]
+
 function GaugeChart({ score, maxScore, severity }: { score: number; maxScore: number; severity: 'mild' | 'moderate' | 'severe' }) {
   const pct = Math.min(score / maxScore, 1)
   const circ = 2 * Math.PI * 90
@@ -102,7 +110,7 @@ function GaugeChart({ score, maxScore, severity }: { score: number; maxScore: nu
 }
 
 function SuggestionIcon({ idx }: { idx: number }) {
-  const icons = [Lightbulb, Clock, Leaf, Target, Heart, Coffee, BookOpen, Sparkles]
+  const icons = [Lightbulb, Clock, Leaf, Target, Heart, Coffee, BookOpen, Sparkles, Activity, HandHeart]
   const Icon = icons[idx % icons.length]
   const colors = [
     'from-rose-100 to-warm-100 text-rose-500',
@@ -117,12 +125,127 @@ function SuggestionIcon({ idx }: { idx: number }) {
   )
 }
 
+function SymptomTag({ symptom, rank }: { symptom: TopSymptom; rank: number }) {
+  const color = symptomTagColors[rank % symptomTagColors.length]
+  const Icon = color.icon
+  return (
+    <div className={cn(
+      'inline-flex items-center gap-2 px-4 py-2 rounded-full border shadow-sm',
+      color.bg, color.text, color.border
+    )}>
+      <Icon className="w-4 h-4" fill="currentColor" fillOpacity={0.3} />
+      <span className="font-semibold text-sm">{symptom.name}</span>
+      <span className="text-xs opacity-75 font-medium">
+        {symptom.score === 3 ? '重度' : symptom.score === 2 ? '中度' : '轻度'}
+      </span>
+    </div>
+  )
+}
+
+function SleepIssueTag({ issue, rank }: { issue: SleepIssue; rank: number }) {
+  const color = symptomTagColors[rank % symptomTagColors.length]
+  const Icon = color.icon
+  return (
+    <div className={cn(
+      'inline-flex items-center gap-2 px-4 py-2 rounded-full border shadow-sm',
+      color.bg, color.text, color.border
+    )}>
+      <Icon className="w-4 h-4" fill="currentColor" fillOpacity={0.3} />
+      <span className="font-semibold text-sm">{issue.label}</span>
+      <span className="text-xs opacity-75 font-medium">
+        {issue.score === 3 ? '明显' : issue.score === 2 ? '轻度' : '良好'}
+      </span>
+    </div>
+  )
+}
+
+function SevereAlertBanner() {
+  return (
+    <div className="stagger-enter rounded-2xl bg-gradient-to-r from-rose-500 to-rose-600 p-5 shadow-lg shadow-rose-200/50">
+      <div className="flex items-start gap-4">
+        <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+          <AlertTriangle className="w-6 h-6 text-white" fill="currentColor" fillOpacity={0.3} strokeWidth={1.8} />
+        </div>
+        <div className="flex-1">
+          <h4 className="font-bold text-white text-base mb-1">需要专业医疗关注</h4>
+          <p className="text-white/90 text-sm leading-relaxed">
+            您的症状已达到重度程度，强烈建议尽快寻求专业医疗帮助。请不要独自承受，及时就医可以有效缓解症状、预防并发症。
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function MedicalAdviceCard({ suggestions }: { suggestions: string[] }) {
+  return (
+    <div className="rounded-2xl border-2 border-rose-200 bg-gradient-to-br from-rose-50/80 to-warm-50/60 p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center">
+          <AlertTriangle className="w-5 h-5 text-rose-500" strokeWidth={1.8} />
+        </div>
+        <h4 className="font-bold text-rose-700 text-base">就医建议</h4>
+      </div>
+      <ul className="space-y-2.5">
+        {suggestions.map((s, idx) => (
+          <li key={idx} className="flex items-start gap-2.5 text-sm text-rose-700 leading-relaxed">
+            <span className="w-5 h-5 rounded-full bg-rose-200 flex items-center justify-center shrink-0 mt-0.5">
+              <span className="text-xs font-bold text-rose-600">{idx + 1}</span>
+            </span>
+            <span>{s}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function RecommendedProgramCard({ program, idx }: { program: CareProgramRecommendation; idx: number }) {
+  const navigate = useNavigate()
+  return (
+    <div
+      className="rounded-2xl bg-white p-6 border border-clay-100 shadow-sm hover:shadow-lg hover:shadow-rose-100/50 transition-all stagger-enter"
+      style={{ animationDelay: `${idx * 0.1}s` }}
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div className={cn(
+          'w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center shadow-sm',
+          idx === 0
+            ? 'from-rose-100 to-warm-100'
+            : 'from-lavender-100 to-sage-100'
+        )}>
+          <HandHeart className={cn(
+            'w-6 h-6',
+            idx === 0 ? 'text-rose-500' : 'text-lavender-500'
+          )} strokeWidth={1.8} />
+        </div>
+        <span className="text-xs text-clay-400 border border-clay-100 px-2.5 py-1 rounded-full">
+          保密参与
+        </span>
+      </div>
+
+      <h4 className="font-bold text-clay-800 mb-2">{program.title}</h4>
+      <p className="text-xs text-warm-500 mb-4 leading-relaxed font-medium">
+        <Sparkles className="w-3 h-3 inline -mt-0.5 mr-1" />
+        {program.reason}
+      </p>
+
+      <button
+        onClick={() => navigate('/care-channel')}
+        className="w-full inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-full text-sm font-semibold bg-gradient-to-r from-rose-400 to-warm-400 text-white shadow-md hover:shadow-lg hover:shadow-rose-200/50 hover:scale-[1.02] transition-all"
+      >
+        立即报名
+        <ArrowRight className="w-4 h-4" />
+      </button>
+    </div>
+  )
+}
+
 export default function AssessmentResult() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [data, setData] = useState<ResultData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [carePrograms, setCarePrograms] = useState<CareProgram[]>([])
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -144,49 +267,6 @@ export default function AssessmentResult() {
     }
     fetchResult()
   }, [id])
-
-  useEffect(() => {
-    if (!data) return
-    if (data.severity === 'mild') return
-
-    const fetchPrograms = async () => {
-      try {
-        const res = await fetch('/api/care-channel/programs')
-        const result = await res.json()
-        if (result.success) {
-          const allPrograms: CareProgram[] = result.data.programs || result.data
-          const programs = allPrograms.filter((p) => {
-            if (data.type === 'sleep') return p.title.includes('夜醒') || p.title.includes('疲劳') || p.title.includes('综合')
-            return p.title.includes('焦虑') || p.title.includes('综合') || p.title.includes('疲劳')
-          }).slice(0, 2)
-          setCarePrograms(programs)
-        }
-      } catch (e) {
-        const fallbackPrograms: CareProgram[] = [
-          {
-            id: 'fallback-1',
-            title: '🌙 夜醒人群专项关怀',
-            targetGroup: '睡眠困扰较明显的同事',
-            description: '针对睡眠自测达到中度及以上困扰的同事，提供睡眠改善专项支持。',
-            benefits: ['1对1睡眠健康咨询', '睡眠监测指导', '专家门诊绿色通道'],
-            eligibilityCriteria: ['睡眠自测结果中度及以上'],
-            privacyCommitment: '所有信息严格保密',
-          },
-          {
-            id: 'fallback-2',
-            title: '🌸 综合健康管理套餐',
-            targetGroup: '多种症状叠加困扰的同事',
-            description: '提供全方位的健康评估与持续关怀服务。',
-            benefits: ['全面健康评估', '持续跟进关怀', '多学科专家咨询'],
-            eligibilityCriteria: ['任一自测结果中度及以上'],
-            privacyCommitment: '所有信息严格保密',
-          },
-        ]
-        setCarePrograms(fallbackPrograms)
-      }
-    }
-    fetchPrograms()
-  }, [data])
 
   if (loading) {
     return (
@@ -220,12 +300,47 @@ export default function AssessmentResult() {
         name: sleepQuestionLabels[a.questionId] || `问题${i + 1}`,
         score: a.value,
         fullMark: 3,
+        isHigh: a.value >= 2,
       }))
     : (data.symptoms as SymptomScore[]).map((s) => ({
         name: s.name,
         score: s.score,
         fullMark: 3,
+        isHigh: s.score >= 2,
       }))
+
+  const weightedScore = !isSleep && 'weightedScore' in data ? data.weightedScore : null
+
+  const topSymptoms = !isSleep && 'topSymptoms' in data ? data.topSymptoms as TopSymptom[] : []
+  const topIssues = isSleep && 'topIssues' in data ? (data.topIssues as SleepIssue[]) || [] : []
+  const recommendedPrograms = 'recommendedPrograms' in data ? (data.recommendedPrograms as CareProgramRecommendation[]) || [] : []
+
+  const isSevere = data.severity === 'severe'
+
+  let dailyCareSuggestions: string[] = []
+  let specificSuggestions: string[] = []
+  let medicalSuggestions: string[] = []
+
+  if (isSleep) {
+    const generalCount = isSevere ? 3 : isSevere ? 3 : 4
+    dailyCareSuggestions = data.suggestions.slice(0, generalCount)
+    specificSuggestions = data.suggestions.slice(generalCount, isSevere ? -3 : undefined)
+    if (isSevere) {
+      medicalSuggestions = data.suggestions.slice(-3)
+    }
+  } else {
+    const generalCount = isSevere ? 5 : 5
+    dailyCareSuggestions = data.suggestions.slice(0, generalCount)
+    const specificCount = isSevere ? 4 : 4
+    specificSuggestions = data.suggestions.slice(generalCount, generalCount + specificCount)
+    if (isSevere) {
+      medicalSuggestions = data.suggestions.slice(generalCount + specificCount)
+    }
+  }
+
+  const highScoreNames = new Set(
+    chartData.filter(d => d.isHigh).map(d => d.name)
+  )
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
@@ -260,11 +375,19 @@ export default function AssessmentResult() {
         </div>
       </div>
 
+      {isSevere && <SevereAlertBanner />}
+
       <div className="stagger-enter rounded-3xl border border-clay-100 bg-white shadow-sm overflow-hidden">
         <div className="bg-gradient-to-br from-clay-50/60 to-white p-8">
           <div className="flex flex-col lg:flex-row items-center gap-10">
             <div className="flex-shrink-0">
               <GaugeChart score={data.totalScore} maxScore={maxScore} severity={data.severity} />
+              {weightedScore !== null && (
+                <div className="text-center mt-3">
+                  <span className="text-xs text-clay-400">加权评分: </span>
+                  <span className="text-sm font-bold text-lavender-600">{weightedScore.toFixed(1)}</span>
+                </div>
+              )}
             </div>
             <div className="flex-1 text-center lg:text-left w-full">
               <div className="inline-flex items-center gap-2 mb-4">
@@ -289,17 +412,37 @@ export default function AssessmentResult() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-center lg:justify-start gap-3 mb-5">
-                <span className={cn(
-                  'inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-bold border',
-                  sev.bg, sev.text, sev.border
-                )}>
-                  <span className={cn('w-2 h-2 rounded-full', sev.dot)} />
-                  {sev.label}
-                </span>
-                <span className="text-xs text-clay-400">
-                  参考标准：{isSleep ? '≤11 良好 / 12-18 中度 / ≥19 重度' : '≤20 轻度 / 21-35 中度 / ≥36 重度'}
-                </span>
+              <div className="flex flex-col items-center lg:items-start gap-3 mb-5">
+                <div className="flex items-center gap-3">
+                  <span className={cn(
+                    'inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-bold border',
+                    sev.bg, sev.text, sev.border
+                  )}>
+                    <span className={cn('w-2 h-2 rounded-full', sev.dot)} />
+                    {sev.label}
+                  </span>
+                  <span className="text-xs text-clay-400">
+                    参考标准：{isSleep ? '≤11 良好 / 12-18 中度 / ≥19 重度' : '≤25 轻度 / 26-45 中度 / ≥46 重度'}
+                  </span>
+                </div>
+
+                {!isSleep && topSymptoms.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    <span className="text-xs text-clay-400 mr-1">主要困扰：</span>
+                    {topSymptoms.map((symptom, idx) => (
+                      <SymptomTag key={symptom.symptomId} symptom={symptom} rank={idx} />
+                    ))}
+                  </div>
+                )}
+
+                {isSleep && topIssues.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    <span className="text-xs text-clay-400 mr-1">主要问题：</span>
+                    {topIssues.map((issue, idx) => (
+                      <SleepIssueTag key={issue.questionId} issue={issue} rank={idx} />
+                    ))}
+                  </div>
+                )}
               </div>
 
               <p className={cn('text-base leading-relaxed max-w-lg', sev.text)}>
@@ -311,12 +454,60 @@ export default function AssessmentResult() {
         </div>
       </div>
 
+      {isSleep && topIssues.length > 0 && (
+        <div className="stagger-enter rounded-3xl border border-clay-100 bg-white shadow-sm p-7">
+          <div className="flex items-center gap-2 mb-6">
+            <AlertTriangle className="w-5 h-5 text-warm-500" strokeWidth={1.8} />
+            <h3 className="text-lg font-bold text-clay-800">具体问题分析</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {topIssues.map((issue, idx) => (
+              <div
+                key={issue.questionId}
+                className="p-5 rounded-2xl border border-warm-100 bg-gradient-to-br from-warm-50/50 to-rose-50/30 stagger-enter"
+                style={{ animationDelay: `${idx * 0.05}s` }}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={cn(
+                    'w-10 h-10 rounded-xl flex items-center justify-center shrink-0',
+                    idx === 0 ? 'bg-rose-100' : idx === 1 ? 'bg-warm-100' : 'bg-sage-100'
+                  )}>
+                    <Clock className={cn(
+                      'w-5 h-5',
+                      idx === 0 ? 'text-rose-500' : idx === 1 ? 'text-warm-500' : 'text-sage-500'
+                    )} strokeWidth={1.8} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-bold text-clay-700">{issue.label}</span>
+                      <span className={cn(
+                        'text-xs font-medium px-2 py-0.5 rounded-full',
+                        issue.score === 3 ? 'bg-rose-100 text-rose-600' : 'bg-warm-100 text-warm-600'
+                      )}>
+                        {issue.score === 3 ? '明显' : '轻度'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-clay-600 leading-relaxed">{issue.description}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="stagger-enter rounded-3xl border border-clay-100 bg-white shadow-sm p-7">
         <div className="flex items-center gap-2 mb-6">
           <Activity className="w-5 h-5 text-lavender-500" strokeWidth={1.8} />
           <h3 className="text-lg font-bold text-clay-800">
             {isSleep ? '睡眠各维度得分明细' : '十项症状评分雷达图'}
           </h3>
+          {highScoreNames.size > 0 && (
+            <span className="text-xs text-clay-400 ml-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-rose-500 mr-1" />
+              红点标记 = 需重点关注
+            </span>
+          )}
         </div>
 
         <div className="h-[340px]">
@@ -346,8 +537,11 @@ export default function AssessmentResult() {
                   formatter={(value: number) => [value, '得分']}
                 />
                 <Bar dataKey="score" radius={[10, 10, 0, 0]} barSize={38}>
-                  {chartData.map((_, i) => (
-                    <Cell key={i} fill={sleepColors[i % sleepColors.length]} />
+                  {chartData.map((entry, i) => (
+                    <Cell
+                      key={i}
+                      fill={entry.isHigh ? '#E26D75' : sleepColors[i % sleepColors.length]}
+                    />
                   ))}
                 </Bar>
               </BarChart>
@@ -384,6 +578,19 @@ export default function AssessmentResult() {
                   fill="url(#menopauseGrad)"
                   fillOpacity={0.45}
                 />
+                {chartData.map((entry, index) => (
+                  entry.isHigh && (
+                    <ReferenceDot
+                      key={`dot-${index}`}
+                      x={entry.name}
+                      y={entry.score}
+                      r={6}
+                      fill="#E26D75"
+                      stroke="white"
+                      strokeWidth={2}
+                    />
+                  )
+                ))}
                 <defs>
                   <linearGradient id="menopauseGrad" x1="0" y1="0" x2="1" y2="1">
                     <stop offset="0%" stopColor="#E8B4B8" />
@@ -402,31 +609,84 @@ export default function AssessmentResult() {
           <h3 className="text-lg font-bold text-clay-800">为您定制的健康建议</h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {data.suggestions.map((s, idx) => (
-            <div
-              key={idx}
-              className={cn(
-                'p-5 rounded-2xl border transition-all hover:shadow-md stagger-enter',
-                idx % 2 === 0
-                  ? 'bg-gradient-to-br from-lavender-50/80 to-rose-50/50 border-lavender-100 hover:border-lavender-200'
-                  : 'bg-gradient-to-br from-sage-50/70 to-warm-50/70 border-sage-100 hover:border-sage-200'
-              )}
-              style={{ animationDelay: `${idx * 0.05}s` }}
-            >
-              <div className="flex items-start gap-3.5">
-                <SuggestionIcon idx={idx} />
-                <div className="flex-1">
-                  <div className="text-xs font-bold text-clay-400 mb-1.5">建议 {String(idx + 1).padStart(2, '0')}</div>
-                  <p className="text-sm text-clay-700 leading-relaxed">{s}</p>
-                </div>
+        <div className="space-y-6">
+          {dailyCareSuggestions.length > 0 && (
+            <div>
+              <h4 className="text-sm font-bold text-clay-600 mb-3 flex items-center gap-2">
+                <Leaf className="w-4 h-4 text-sage-500" />
+                日常自我护理
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {dailyCareSuggestions.map((s, idx) => (
+                  <div
+                    key={`daily-${idx}`}
+                    className={cn(
+                      'p-4 rounded-2xl border transition-all hover:shadow-md stagger-enter',
+                      idx % 2 === 0
+                        ? 'bg-gradient-to-br from-lavender-50/80 to-rose-50/50 border-lavender-100 hover:border-lavender-200'
+                        : 'bg-gradient-to-br from-sage-50/70 to-warm-50/70 border-sage-100 hover:border-sage-200'
+                    )}
+                    style={{ animationDelay: `${idx * 0.05}s` }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <SuggestionIcon idx={idx} />
+                      <div className="flex-1">
+                        <div className="text-xs font-bold text-clay-400 mb-1">建议 {String(idx + 1).padStart(2, '0')}</div>
+                        <p className="text-sm text-clay-700 leading-relaxed">{s}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
+          )}
+
+          {specificSuggestions.length > 0 && (
+            <div>
+              <h4 className="text-sm font-bold text-clay-600 mb-3 flex items-center gap-2">
+                <Target className="w-4 h-4 text-warm-500" />
+                针对性症状建议
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {specificSuggestions.map((s, idx) => (
+                  <div
+                    key={`specific-${idx}`}
+                    className={cn(
+                      'p-4 rounded-2xl border transition-all hover:shadow-md stagger-enter',
+                      idx % 2 === 0
+                        ? 'bg-gradient-to-br from-warm-50/80 to-rose-50/50 border-warm-100 hover:border-warm-200'
+                        : 'bg-gradient-to-br from-rose-50/70 to-lavender-50/50 border-rose-100 hover:border-rose-200'
+                    )}
+                    style={{ animationDelay: `${(dailyCareSuggestions.length + idx) * 0.05}s` }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <SuggestionIcon idx={dailyCareSuggestions.length + idx} />
+                      <div className="flex-1">
+                        <div className="text-xs font-bold text-clay-400 mb-1">
+                          建议 {String(dailyCareSuggestions.length + idx + 1).padStart(2, '0')}
+                        </div>
+                        <p className="text-sm text-clay-700 leading-relaxed">{s}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {isSevere && medicalSuggestions.length > 0 && (
+            <div>
+              <h4 className="text-sm font-bold text-rose-600 mb-3 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" fill="currentColor" fillOpacity={0.3} />
+                就医提示
+              </h4>
+              <MedicalAdviceCard suggestions={medicalSuggestions} />
+            </div>
+          )}
         </div>
       </div>
 
-      {data.severity !== 'mild' && carePrograms.length > 0 && (
+      {recommendedPrograms.length > 0 && (
         <div className="stagger-enter rounded-3xl border border-rose-100 bg-gradient-to-br from-rose-50/60 via-warm-50/60 to-lavender-50/40 p-7 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <Heart className="w-5 h-5 text-rose-500" strokeWidth={1.8} fill="currentColor" fillOpacity={0.15} />
@@ -437,53 +697,40 @@ export default function AssessmentResult() {
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {carePrograms.map((prog, idx) => (
-              <div
-                key={prog.id}
-                className="rounded-2xl bg-white p-6 border border-clay-100 shadow-sm hover:shadow-lg hover:shadow-rose-100/50 transition-all stagger-enter"
-                style={{ animationDelay: `${idx * 0.1}s` }}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className={cn(
-                    'w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center shadow-sm',
-                    idx === 0
-                      ? 'from-rose-100 to-warm-100'
-                      : 'from-lavender-100 to-sage-100'
-                  )}>
-                    <HandHeart className={cn(
-                      'w-6 h-6',
-                      idx === 0 ? 'text-rose-500' : 'text-lavender-500'
-                    )} strokeWidth={1.8} />
-                  </div>
-                  <span className="text-xs text-clay-400 border border-clay-100 px-2.5 py-1 rounded-full">
-                    保密参与
-                  </span>
-                </div>
-
-                <h4 className="font-bold text-clay-800 mb-2">{prog.title}</h4>
-                <p className="text-xs text-clay-500 leading-relaxed mb-4 line-clamp-2">{prog.description}</p>
-
-                <div className="flex flex-wrap gap-1.5 mb-5">
-                  {prog.benefits.slice(0, 3).map((b, i) => (
-                    <span
-                      key={i}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-clay-50 text-[11px] text-clay-600"
-                    >
-                      <Leaf className="w-3 h-3 text-sage-500" strokeWidth={2} />
-                      {b.length > 10 ? b.slice(0, 10) + '…' : b}
-                    </span>
-                  ))}
-                </div>
-
-                <button
-                  onClick={() => navigate('/care-channel')}
-                  className="w-full inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-full text-sm font-semibold bg-gradient-to-r from-rose-400 to-warm-400 text-white shadow-md hover:shadow-lg hover:shadow-rose-200/50 hover:scale-[1.02] transition-all"
-                >
-                  立即报名
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
+            {recommendedPrograms.map((prog, idx) => (
+              <RecommendedProgramCard key={prog.id} program={prog} idx={idx} />
             ))}
+          </div>
+        </div>
+      )}
+
+      {recommendedPrograms.length === 0 && data.severity !== 'mild' && (
+        <div className="stagger-enter rounded-3xl border border-rose-100 bg-gradient-to-br from-rose-50/60 via-warm-50/60 to-lavender-50/40 p-7 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <Heart className="w-5 h-5 text-rose-500" strokeWidth={1.8} fill="currentColor" fillOpacity={0.15} />
+            <h3 className="text-lg font-bold text-clay-800">为您推荐的关怀通道</h3>
+          </div>
+          <p className="text-sm text-clay-500 mb-6">
+            基于你的评估结果，我们为你匹配了以下深度关怀项目，全程保密参与
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <RecommendedProgramCard
+              program={{
+                id: 'fallback-1',
+                title: '🌙 夜醒人群专项关怀',
+                reason: '针对中度及以上困扰的同事，提供专业睡眠改善支持',
+              }}
+              idx={0}
+            />
+            <RecommendedProgramCard
+              program={{
+                id: 'fallback-2',
+                title: '🌸 综合健康管理套餐',
+                reason: '适合多种症状叠加困扰的同事，提供全方位关怀',
+              }}
+              idx={1}
+            />
           </div>
         </div>
       )}

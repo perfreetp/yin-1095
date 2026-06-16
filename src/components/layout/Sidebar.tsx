@@ -39,7 +39,8 @@ const employeeNavItems: NavItem[] = [
 const adminNavItems: NavItem[] = [
   { to: '/admin/dashboard', label: '数据看板', icon: BarChart3 },
   { to: '/admin/activities', label: '活动管理', icon: CalendarCog },
-  { to: '/admin/feedback', label: '反馈审阅', icon: Inbox },
+  { to: '/admin/care-queue', label: '关怀队列', icon: Inbox },
+  { to: '/admin/feedback', label: '反馈审阅', icon: MessageSquareHeart },
 ]
 
 export default function Sidebar() {
