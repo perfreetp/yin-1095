@@ -19,17 +19,19 @@ interface AppState {
 }
 
 const defaultUser: User = {
-  id: 'a1b2c3d4-0000-0000-0000-000000000006',
+  id: 'employee-001',
   name: '林雅婷',
   department: '产品部',
   role: 'employee',
+  avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=employee-001',
 }
 
 const adminUser: User = {
-  id: 'a1b2c3d4-0000-0000-0000-000000000001',
+  id: 'admin-001',
   name: '王慧敏',
   department: '人力资源部',
   role: 'admin',
+  avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin-001',
 }
 
 export const useAppStore = create<AppState>((set, get) => ({

@@ -344,12 +344,13 @@ export default function CareChannel() {
       if (json.success) {
         setShowSuccess(true)
         setSuccessData(json.data.apply)
-        setMyApplications((prev) => [...prev, json.data.apply])
+        setMyApplications((prev) => [json.data.apply, ...prev])
         setPrograms((prev) =>
           prev.map((p) =>
             p.id === selectedProgram.id ? { ...p, applied: true, applyStatus: 'pending' } : p,
           ),
         )
+        fetchMyApplications()
       } else {
         setToast({ type: 'error', message: json.error || '报名失败' })
       }

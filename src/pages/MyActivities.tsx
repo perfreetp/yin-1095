@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   CalendarDays,
@@ -148,6 +148,29 @@ export default function MyActivities() {
     })
   }
 
+  const fetchMyActivities = useCallback(async () => {
+    if (!user) return
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/activities/my?userId=${user.id}`)
+      const json = await res.json()
+      if (json.success) {
+        setItems(json.data || [])
+        const submittedIds = new Set<string>()
+        ;(json.data || []).forEach((item: MyActivityItem) => {
+          if (item.registration.feedbackSubmitted) {
+            submittedIds.add(item.activity.id)
+          }
+        })
+        setFeedbackState((prev) => ({ ...prev, hasSubmitted: submittedIds }))
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoading(false)
+    }
+  }, [user])
+
   const handleSubmitFeedback = async () => {
     if (!user || !feedbackState.activity) return
     if (feedbackForm.rating === 0 || feedbackForm.contentPracticality === 0 || feedbackForm.wouldRecommend === null) {
@@ -176,6 +199,7 @@ export default function MyActivities() {
           showThankYou: true,
           hasSubmitted: new Set(feedbackState.hasSubmitted).add(feedbackState.activity.id),
         })
+        fetchMyActivities()
       } else {
         alert(json.error || '提交失败')
         setFeedbackState({ ...feedbackState, submitting: false })
@@ -187,23 +211,8 @@ export default function MyActivities() {
   }
 
   useEffect(() => {
-    if (!user) return
-    const fetchData = async () => {
-      setLoading(true)
-      try {
-        const res = await fetch(`/api/activities/my?userId=${user.id}`)
-        const json = await res.json()
-        if (json.success) {
-          setItems(json.data || [])
-        }
-      } catch (e) {
-        console.error(e)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchData()
-  }, [user])
+    fetchMyActivities()
+  }, [fetchMyActivities])
 
   const handleCancel = async (activityId: string) => {
     if (!user) return

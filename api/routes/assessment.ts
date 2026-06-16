@@ -621,17 +621,25 @@ router.get('/result/:id', async (req: Request, res: Response): Promise<void> => 
     const { id } = req.params
     const { userId } = req.query
 
+    if (!userId) {
+      res.status(403).json({
+        success: false,
+        error: '无权访问此报告，请先登录',
+      })
+      return
+    }
+
+    const userIdStr = String(userId)
+
     const sleepResult = mockData.sleepAssessments.find((a) => a.id === id)
     if (sleepResult) {
-      if (userId) {
-        const reportUserId = (sleepResult as SleepAssessment & { userId?: string }).userId
-        if (reportUserId !== String(userId)) {
-          res.status(403).json({
-            success: false,
-            error: '无权访问该报告',
-          })
-          return
-        }
+      const reportUserId = (sleepResult as SleepAssessment & { userId?: string }).userId
+      if (!reportUserId || reportUserId !== userIdStr) {
+        res.status(403).json({
+          success: false,
+          error: '您无权查看此报告',
+        })
+        return
       }
       res.status(200).json({
         success: true,
@@ -644,15 +652,13 @@ router.get('/result/:id', async (req: Request, res: Response): Promise<void> => 
       (a) => a.id === id,
     )
     if (menopauseResult) {
-      if (userId) {
-        const reportUserId = (menopauseResult as MenopauseAssessment & { userId?: string }).userId
-        if (reportUserId !== String(userId)) {
-          res.status(403).json({
-            success: false,
-            error: '无权访问该报告',
-          })
-          return
-        }
+      const reportUserId = (menopauseResult as MenopauseAssessment & { userId?: string }).userId
+      if (!reportUserId || reportUserId !== userIdStr) {
+        res.status(403).json({
+          success: false,
+          error: '您无权查看此报告',
+        })
+        return
       }
       res.status(200).json({
         success: true,

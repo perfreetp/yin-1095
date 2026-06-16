@@ -653,11 +653,11 @@ router.get('/effect-tracking', async (req: Request, res: Response): Promise<void
 
       const avgSatisfaction = monthFeedbacks.length > 0
         ? Number((monthFeedbacks.reduce((sum, f) => sum + f.rating, 0) / monthFeedbacks.length * 20).toFixed(1))
-        : Number((75 + monthIdx * 3 + Math.random() * 5).toFixed(1))
+        : 0
 
       const avgRating = monthFeedbacks.length > 0
         ? Number((monthFeedbacks.reduce((sum, f) => sum + f.rating, 0) / monthFeedbacks.length).toFixed(1))
-        : Number((3.8 + monthIdx * 0.1 + Math.random() * 0.3).toFixed(1))
+        : 0
 
       activitySatisfactionTrends.push({
         month: monthLabels[monthIdx],

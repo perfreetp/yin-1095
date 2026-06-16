@@ -92,9 +92,15 @@ router.get('/my', async (req: Request, res: Response): Promise<void> => {
     const result = myRegistrations
       .map((reg) => {
         const activity = activityMap.get(reg.activityId)
+        const hasFeedback = mockData.activityFeedbacks.some(
+          (f) => f.activityId === reg.activityId && f.userId === userId,
+        )
         return activity
           ? {
-              registration: reg,
+              registration: {
+                ...reg,
+                feedbackSubmitted: hasFeedback,
+              },
               activity,
             }
           : null
@@ -141,19 +147,28 @@ router.get('/my-effect', async (req: Request, res: Response): Promise<void> => {
       ? Number((myFeedbacks.reduce((sum, f) => sum + f.rating, 0) / myFeedbacks.length).toFixed(1))
       : 0
 
+    const userSleepAssessments = mockData.sleepAssessments.filter(
+      (a) => (a as SleepAssessment & { userId?: string }).userId === userId,
+    )
+    const userMenopauseAssessments = mockData.menopauseAssessments.filter(
+      (a) => (a as MenopauseAssessment & { userId?: string }).userId === userId,
+    )
+
     const userAssessments: Array<SleepAssessment | MenopauseAssessment> = [
-      ...mockData.sleepAssessments.filter((a) => a.department),
-      ...mockData.menopauseAssessments.filter((a) => a.department),
+      ...userSleepAssessments,
+      ...userMenopauseAssessments,
     ].sort((a, b) => new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime())
 
     const assessmentTrend: Array<{ date: string; score: number }> = []
-    const recentAssessments = userAssessments.slice(-3)
-    for (const assessment of recentAssessments) {
-      const date = new Date(assessment.submittedAt)
-      assessmentTrend.push({
-        date: `${date.getMonth() + 1}/${date.getDate()}`,
-        score: assessment.totalScore,
-      })
+    if (userAssessments.length > 0) {
+      const recentAssessments = userAssessments.slice(-6)
+      for (const assessment of recentAssessments) {
+        const date = new Date(assessment.submittedAt)
+        assessmentTrend.push({
+          date: `${date.getMonth() + 1}/${date.getDate()}`,
+          score: assessment.totalScore,
+        })
+      }
     }
 
     const activityIds = myRegistrations.map((r) => r.activityId)
@@ -300,6 +315,109 @@ router.post('/:id/register', async (req: Request, res: Response): Promise<void> 
     res.status(500).json({
       success: false,
       error: '活动报名失败，请稍后重试',
+    })
+  }
+})
+
+router.post('/:id/feedback', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params
+    const { userId, rating, content, comment, contentPracticality, wouldRecommend }: {
+      userId: string
+      rating: number
+      content?: string
+      comment?: string
+      contentPracticality?: number
+      wouldRecommend?: boolean
+    } = req.body
+
+    const feedbackContent = content ?? comment
+
+    if (!userId || !rating || !feedbackContent) {
+      res.status(400).json({
+        success: false,
+        error: '用户ID、评分和反馈内容不能为空',
+      })
+      return
+    }
+
+    if (rating < 1 || rating > 5) {
+      res.status(400).json({
+        success: false,
+        error: '评分必须在1-5之间',
+      })
+      return
+    }
+
+    if (contentPracticality !== undefined && (contentPracticality < 1 || contentPracticality > 5)) {
+      res.status(400).json({
+        success: false,
+        error: '内容实用性评分必须在1-5之间',
+      })
+      return
+    }
+
+    const activity = mockData.activities.find((a) => a.id === id)
+    if (!activity) {
+      res.status(404).json({
+        success: false,
+        error: '活动不存在',
+      })
+      return
+    }
+
+    const registration = mockData.activityRegistrations.find(
+      (r) => r.activityId === id && r.userId === userId && r.status !== 'cancelled',
+    )
+    if (!registration) {
+      res.status(400).json({
+        success: false,
+        error: '您未报名该活动，无法提交反馈',
+      })
+      return
+    }
+
+    const existingFeedback = mockData.activityFeedbacks.find(
+      (f) => f.activityId === id && f.userId === userId,
+    )
+    if (existingFeedback) {
+      res.status(400).json({
+        success: false,
+        error: '您已经提交过该活动的反馈',
+      })
+      return
+    }
+
+    const feedback: ActivityFeedback & { id: string } = {
+      id: generateUUID(),
+      activityId: id,
+      userId,
+      rating: Math.max(1, Math.min(5, rating)),
+      content: feedbackContent,
+      contentPracticality: contentPracticality !== undefined ? Math.max(1, Math.min(5, contentPracticality)) : undefined,
+      submittedAt: new Date().toISOString(),
+      wouldRecommend: wouldRecommend ?? true,
+    }
+
+    mockData.activityFeedbacks.push(feedback)
+
+    res.status(200).json({
+      success: true,
+      data: {
+        message: '反馈提交成功，感谢您的宝贵意见',
+        feedback: {
+          id: feedback.id,
+          activityId: feedback.activityId,
+          rating: feedback.rating,
+          contentPracticality: feedback.contentPracticality,
+          submittedAt: feedback.submittedAt,
+        },
+      },
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: '提交反馈失败，请稍后重试',
     })
   }
 })

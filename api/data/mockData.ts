@@ -101,10 +101,54 @@ const departmentList: Department[] = departments.map((name) => ({
 }))
 
 const users: User[] = []
-let userIdIndex = 0
+
+const fixedUsers: User[] = [
+  {
+    id: 'admin-001',
+    name: '王慧敏',
+    department: '人力资源部',
+    role: 'admin',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin-001',
+  },
+  {
+    id: 'admin-002',
+    name: '李主任',
+    department: '人力资源部',
+    role: 'admin',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin-002',
+  },
+  {
+    id: 'employee-001',
+    name: '林雅婷',
+    department: '产品部',
+    role: 'employee',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=employee-001',
+  },
+  {
+    id: 'employee-002',
+    name: '张晓雯',
+    department: '技术部',
+    role: 'employee',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=employee-002',
+  },
+  {
+    id: 'employee-003',
+    name: '刘美玲',
+    department: '市场部',
+    role: 'employee',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=employee-003',
+  },
+]
+
+users.push(...fixedUsers)
+
+let userIdIndex = fixedUsers.length
+
+const fixedUserDepartments = new Set(fixedUsers.map(u => u.department))
 
 for (const dept of departments) {
-  const count = departmentEmployeeCounts[dept]
+  const fixedCount = fixedUsers.filter(u => u.department === dept).length
+  const count = departmentEmployeeCounts[dept] - fixedCount
   for (let i = 0; i < count; i++) {
     const isAdmin = userIdIndex < 5
     users.push({
@@ -942,7 +986,7 @@ function generateCareChannelApplies(): CareChannelApply[] {
       contactPreference: pickRandom(contactPreferences),
       preferredTime: [pickRandom(preferredTimes)],
       additionalNotes: '',
-      anonymousCode: `ANON-${generateUUID().slice(0, 8).toUpperCase()}`,
+      anonymousCode: `ANO-${String(i + 1).padStart(3, '0')}`,
       processingNotes: status !== 'pending' ? '已安排首次评估' : '',
       updatedAt: formatDate(updatedDate),
       symptomTags: ['失眠', '焦虑'],
@@ -955,6 +999,282 @@ function generateCareChannelApplies(): CareChannelApply[] {
 const exerciseCompletions = generateExerciseCompletions()
 const activityFeedbacks = generateActivityFeedbacks()
 const careChannelApplies = generateCareChannelApplies()
+
+const employee001 = users.find(u => u.id === 'employee-001')
+
+if (employee001) {
+  const empSleepAssessments: SleepAssessment[] = [
+    {
+      id: generateUUID(),
+      userId: 'employee-001',
+      anonymousId: generateUUID(),
+      department: '产品部',
+      submittedAt: '2026-03-15T20:30:00.000Z',
+      answers: [
+        { questionId: 'q1', value: 2 },
+        { questionId: 'q2', value: 2 },
+        { questionId: 'q3', value: 1 },
+        { questionId: 'q4', value: 2 },
+        { questionId: 'q5', value: 2 },
+        { questionId: 'q6', value: 2 },
+        { questionId: 'q7', value: 2 },
+        { questionId: 'q8', value: 2 },
+      ],
+      totalScore: 14,
+      severity: 'moderate',
+      suggestions: [
+        '建议进行睡眠卫生评估，找出影响因素',
+        '适度增加日间运动，避免睡前剧烈运动',
+        '减少咖啡因摄入，下午2点后不喝咖啡/茶',
+        '尝试渐进式肌肉放松或深呼吸练习',
+        '如持续超过2周，建议咨询专业医生',
+        '睡前避免使用电子设备，蓝光会抑制褪黑素分泌',
+      ],
+      topIssues: [
+        { questionId: 'q5', label: '夜醒频率', score: 2, description: '夜间偶有觉醒，睡眠质量受一定影响' },
+        { questionId: 'q6', label: '复睡难度', score: 2, description: '醒后复睡有一定难度，需要调整' },
+        { questionId: 'q2', label: '入睡时长', score: 2, description: '入睡时间较长，可能存在入睡困难' },
+      ],
+      recommendedPrograms: [
+        { id: 'program-night-wake', title: '🌙 夜醒人群专项关怀', reason: '因为您的夜间觉醒和复睡困难症状明显' },
+      ],
+    },
+    {
+      id: generateUUID(),
+      userId: 'employee-001',
+      anonymousId: generateUUID(),
+      department: '产品部',
+      submittedAt: '2026-04-20T21:00:00.000Z',
+      answers: [
+        { questionId: 'q1', value: 1 },
+        { questionId: 'q2', value: 2 },
+        { questionId: 'q3', value: 1 },
+        { questionId: 'q4', value: 1 },
+        { questionId: 'q5', value: 1 },
+        { questionId: 'q6', value: 2 },
+        { questionId: 'q7', value: 2 },
+        { questionId: 'q8', value: 1 },
+      ],
+      totalScore: 10,
+      severity: 'mild',
+      suggestions: [
+        '继续保持规律的作息习惯',
+        '睡前1小时避免使用电子设备',
+        '保持卧室温度适宜（18-22℃）',
+        '适度进行日间运动，有助于提升睡眠质量',
+        '可尝试渐进式肌肉放松或深呼吸练习',
+      ],
+      topIssues: [
+        { questionId: 'q2', label: '入睡时长', score: 2, description: '入睡时间较长，可能存在入睡困难' },
+        { questionId: 'q6', label: '复睡难度', score: 2, description: '醒后复睡有一定难度，需要调整' },
+        { questionId: 'q7', label: '主观质量', score: 2, description: '主观睡眠质量一般，醒后仍有疲劳感' },
+      ],
+      recommendedPrograms: [],
+    },
+    {
+      id: generateUUID(),
+      userId: 'employee-001',
+      anonymousId: generateUUID(),
+      department: '产品部',
+      submittedAt: '2026-05-28T22:15:00.000Z',
+      answers: [
+        { questionId: 'q1', value: 1 },
+        { questionId: 'q2', value: 1 },
+        { questionId: 'q3', value: 1 },
+        { questionId: 'q4', value: 1 },
+        { questionId: 'q5', value: 1 },
+        { questionId: 'q6', value: 1 },
+        { questionId: 'q7', value: 1 },
+        { questionId: 'q8', value: 1 },
+      ],
+      totalScore: 8,
+      severity: 'mild',
+      suggestions: [
+        '继续保持规律的作息习惯',
+        '睡前1小时避免使用电子设备',
+        '保持卧室温度适宜（18-22℃）',
+        '适度进行日间运动，有助于提升睡眠质量',
+      ],
+      topIssues: [],
+      recommendedPrograms: [],
+    },
+  ]
+  sleepAssessments.push(...empSleepAssessments)
+
+  const empMenopauseAssessments: (MenopauseAssessment & { userId?: string })[] = [
+    {
+      id: generateUUID(),
+      userId: 'employee-001',
+      anonymousId: generateUUID(),
+      department: '产品部',
+      submittedAt: '2026-04-10T19:30:00.000Z',
+      symptoms: [
+        { symptomId: 's1', name: '潮热', score: 3 },
+        { symptomId: 's2', name: '失眠', score: 3 },
+        { symptomId: 's3', name: '情绪波动', score: 2 },
+        { symptomId: 's4', name: '心悸', score: 1 },
+        { symptomId: 's5', name: '头痛', score: 2 },
+        { symptomId: 's6', name: '关节痛', score: 1 },
+        { symptomId: 's7', name: '疲劳', score: 3 },
+        { symptomId: 's8', name: '记忆力下降', score: 2 },
+        { symptomId: 's9', name: '阴道干涩', score: 1 },
+        { symptomId: 's10', name: '性欲变化', score: 1 },
+      ],
+      totalScore: 19,
+      weightedScore: 25.8,
+      severity: 'moderate',
+      suggestions: [
+        '建议定期进行妇科检查，关注激素水平变化',
+        '可尝试中医调理，根据体质辨证施治',
+        '学习压力管理技巧，如冥想、深呼吸练习',
+        '保持社交活动，避免孤独感',
+        '与伴侣坦诚沟通，获得理解和支持',
+        '建议穿着透气轻薄的棉质衣物，便于散热',
+      ],
+      topSymptoms: [
+        { symptomId: 's2', name: '失眠', score: 3, weight: 1.5 },
+        { symptomId: 's1', name: '潮热', score: 3, weight: 1.5 },
+        { symptomId: 's7', name: '疲劳', score: 3, weight: 1.3 },
+      ],
+      recommendedPrograms: [
+        { id: 'program-night-wake', title: '🌙 夜醒人群专项关怀', reason: '因为您的失眠症状明显' },
+      ],
+    },
+    {
+      id: generateUUID(),
+      userId: 'employee-001',
+      anonymousId: generateUUID(),
+      department: '产品部',
+      submittedAt: '2026-06-05T20:00:00.000Z',
+      symptoms: [
+        { symptomId: 's1', name: '潮热', score: 2 },
+        { symptomId: 's2', name: '失眠', score: 2 },
+        { symptomId: 's3', name: '情绪波动', score: 1 },
+        { symptomId: 's4', name: '心悸', score: 1 },
+        { symptomId: 's5', name: '头痛', score: 1 },
+        { symptomId: 's6', name: '关节痛', score: 1 },
+        { symptomId: 's7', name: '疲劳', score: 2 },
+        { symptomId: 's8', name: '记忆力下降', score: 1 },
+        { symptomId: 's9', name: '阴道干涩', score: 1 },
+        { symptomId: 's10', name: '性欲变化', score: 1 },
+      ],
+      totalScore: 13,
+      weightedScore: 16.2,
+      severity: 'mild',
+      suggestions: [
+        '保持规律运动，每周3-5次，每次30分钟有氧运动',
+        '饮食均衡，多摄入豆制品、深海鱼、坚果等',
+        '保持良好心态，接受身体的自然变化',
+        '补充钙和维生素D，预防骨质疏松',
+        '每天抽出15分钟做自己喜欢的事情放松心情',
+        '建议穿着透气轻薄的棉质衣物，便于散热',
+      ],
+      topSymptoms: [
+        { symptomId: 's2', name: '失眠', score: 2, weight: 1.5 },
+        { symptomId: 's1', name: '潮热', score: 2, weight: 1.5 },
+        { symptomId: 's7', name: '疲劳', score: 2, weight: 1.3 },
+      ],
+      recommendedPrograms: [],
+    },
+  ]
+  menopauseAssessments.push(...empMenopauseAssessments)
+
+  const pastActivities = activities.filter(a => new Date(a.endTime) < new Date())
+  const upcomingActivities = activities.filter(a => new Date(a.startTime) >= new Date())
+
+  if (pastActivities.length > 0) {
+    const pastActivity = pastActivities[0]
+    const reg1: ActivityRegistration = {
+      id: generateUUID(),
+      activityId: pastActivity.id,
+      userId: 'employee-001',
+      registeredAt: new Date(new Date(pastActivity.startTime).getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+      status: 'attended',
+    }
+    activityRegistrations.push(reg1)
+
+    const feedback1: ActivityFeedback = {
+      id: generateUUID(),
+      activityId: pastActivity.id,
+      userId: 'employee-001',
+      rating: 5,
+      contentPracticality: 5,
+      content: '活动内容非常实用，讲师讲解很专业，学到了很多睡眠改善的方法。特别是478呼吸法，最近一直在用，入睡快多了。希望以后能多办类似的活动！',
+      submittedAt: new Date(new Date(pastActivity.endTime).getTime() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+      wouldRecommend: true,
+    }
+    activityFeedbacks.push(feedback1)
+  }
+
+  if (upcomingActivities.length > 0) {
+    const upcomingActivity = upcomingActivities[0]
+    const reg2: ActivityRegistration = {
+      id: generateUUID(),
+      activityId: upcomingActivity.id,
+      userId: 'employee-001',
+      registeredAt: new Date(new Date(upcomingActivity.startTime).getTime() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+      status: 'registered',
+    }
+    activityRegistrations.push(reg2)
+  }
+
+  const exerciseIds = exercises.slice(0, 6).map(e => e.id)
+  const empExerciseCompletions: ExerciseCompletion[] = [
+    {
+      id: generateUUID(),
+      userId: 'employee-001',
+      exerciseId: exerciseIds[0],
+      completedAt: '2026-06-10T21:30:00.000Z',
+      duration: 5,
+      feeling: 'better',
+      notes: '今天工作压力大，做完后感觉放松多了',
+    },
+    {
+      id: generateUUID(),
+      userId: 'employee-001',
+      exerciseId: exerciseIds[1],
+      completedAt: '2026-06-12T22:00:00.000Z',
+      duration: 8,
+      feeling: 'better',
+    },
+    {
+      id: generateUUID(),
+      userId: 'employee-001',
+      exerciseId: exerciseIds[2],
+      completedAt: '2026-06-13T12:30:00.000Z',
+      duration: 6,
+      feeling: 'same',
+      notes: '午休时间做的，感觉还可以',
+    },
+    {
+      id: generateUUID(),
+      userId: 'employee-001',
+      exerciseId: exerciseIds[4],
+      completedAt: '2026-06-14T07:00:00.000Z',
+      duration: 10,
+      feeling: 'better',
+      notes: '晨间冥想，开启美好一天',
+    },
+    {
+      id: generateUUID(),
+      userId: 'employee-001',
+      exerciseId: exerciseIds[6],
+      completedAt: '2026-06-15T21:45:00.000Z',
+      duration: 15,
+      feeling: 'better',
+    },
+    {
+      id: generateUUID(),
+      userId: 'employee-001',
+      exerciseId: exerciseIds[0],
+      completedAt: '2026-06-16T22:10:00.000Z',
+      duration: 5,
+      feeling: 'better',
+      notes: '坚持练习中！',
+    },
+  ]
+  exerciseCompletions.push(...empExerciseCompletions)
+}
 
 export const mockData = {
   users,

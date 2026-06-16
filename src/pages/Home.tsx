@@ -388,100 +388,125 @@ export default function Home() {
               我的健康足迹
             </h2>
 
-            <div className="flex flex-col lg:flex-row items-center gap-6 mb-6">
-              <div className="relative w-28 h-28 flex-shrink-0">
-                <svg className="w-full h-full -rotate-90">
-                  <circle
-                    cx="56"
-                    cy="56"
-                    r="44"
-                    fill="none"
-                    stroke="#F6F2F9"
-                    strokeWidth="8"
-                  />
-                  <circle
-                    cx="56"
-                    cy="56"
-                    r="44"
-                    fill="none"
-                    stroke="url(#progressGradient)"
-                    strokeWidth="8"
-                    strokeLinecap="round"
-                    strokeDasharray={circumference}
-                    strokeDashoffset={strokeDashoffset}
-                    className="transition-all duration-1000"
-                  />
-                  <defs>
-                    <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#E8B4B8" />
-                      <stop offset="100%" stopColor="#C9B1D4" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-2xl font-bold text-clay-800">{exerciseStats?.weeklyExerciseCount || 0}</span>
-                  <span className="text-[10px] text-clay-500">/ {exerciseStats?.weeklyTarget || 7} 次</span>
-                </div>
-              </div>
-
-              <div className="flex-1 flex flex-col gap-3 w-full">
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="text-center p-3 bg-gradient-to-br from-rose-50 to-rose-100/50 rounded-2xl">
-                    <div className="flex items-center justify-center gap-1 mb-1">
-                      <Flame className="w-4 h-4 text-rose-500" />
-                    </div>
-                    <div className="text-xl font-bold text-clay-800">{exerciseStats?.streakDays || 0}</div>
-                    <div className="text-[10px] text-clay-500">连续天数</div>
-                  </div>
-                  <div className="text-center p-3 bg-gradient-to-br from-lavender-50 to-lavender-100/50 rounded-2xl">
-                    <div className="flex items-center justify-center gap-1 mb-1">
-                      <Clock className="w-4 h-4 text-lavender-500" />
-                    </div>
-                    <div className="text-xl font-bold text-clay-800">{exerciseStats?.totalDuration || 0}</div>
-                    <div className="text-[10px] text-clay-500">累计分钟</div>
-                  </div>
-                  <div className="text-center p-3 bg-gradient-to-br from-sage-50 to-sage-100/50 rounded-2xl">
-                    <div className="flex items-center justify-center gap-1 mb-1">
-                      <CalendarDays className="w-4 h-4 text-sage-500" />
-                    </div>
-                    <div className="text-xl font-bold text-clay-800">{activityEffect?.attendedActivitiesCount || 0}</div>
-                    <div className="text-[10px] text-clay-500">活动参与</div>
+            {!exerciseStats || (exerciseStats.streakDays === 0 && exerciseStats.totalDuration === 0) ? (
+              <div className="flex-1 flex flex-col items-center justify-center py-6 text-center">
+                <div className="relative w-20 h-20 mb-4">
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-rose-50 to-lavender-50" />
+                  <div className="absolute inset-2 rounded-full bg-white flex items-center justify-center shadow-sm">
+                    <Flame className="w-8 h-8 text-rose-300" strokeWidth={1.5} />
                   </div>
                 </div>
+                <h3 className="text-base font-bold text-clay-800 mb-2">还没有练习记录</h3>
+                <p className="text-sm text-clay-500 mb-5 leading-relaxed">
+                  开始今天的放松练习吧！<br />
+                  每天只需几分钟，就能感受到身心的变化
+                </p>
+                <Link
+                  to="/care-plan"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-rose-400 to-lavender-400 text-white text-sm font-medium shadow-md shadow-rose-200/50 hover:shadow-lg hover:shadow-rose-200/60 hover:scale-[1.02] transition-all"
+                >
+                  去练习
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="flex flex-col lg:flex-row items-center gap-6 mb-6">
+                  <div className="relative w-28 h-28 flex-shrink-0">
+                    <svg className="w-full h-full -rotate-90">
+                      <circle
+                        cx="56"
+                        cy="56"
+                        r="44"
+                        fill="none"
+                        stroke="#F6F2F9"
+                        strokeWidth="8"
+                      />
+                      <circle
+                        cx="56"
+                        cy="56"
+                        r="44"
+                        fill="none"
+                        stroke="url(#progressGradient)"
+                        strokeWidth="8"
+                        strokeLinecap="round"
+                        strokeDasharray={circumference}
+                        strokeDashoffset={strokeDashoffset}
+                        className="transition-all duration-1000"
+                      />
+                      <defs>
+                        <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="#E8B4B8" />
+                          <stop offset="100%" stopColor="#C9B1D4" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-2xl font-bold text-clay-800">{exerciseStats?.weeklyExerciseCount || 0}</span>
+                      <span className="text-[10px] text-clay-500">/ {exerciseStats?.weeklyTarget || 7} 次</span>
+                    </div>
+                  </div>
 
-            <div className="mb-4">
-              <p className="text-sm text-clay-500 mb-3">近4周练习趋势</p>
-              <div className="h-20">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={exerciseStats?.weeklyTrend || []} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="miniTrendGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#B55359" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#B55359" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <XAxis dataKey="week" hide />
-                    <YAxis hide />
-                    <Area
-                      type="monotone"
-                      dataKey="count"
-                      stroke="#B55359"
-                      strokeWidth={2}
-                      fill="url(#miniTrendGradient)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+                  <div className="flex-1 flex flex-col gap-3 w-full">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="text-center p-3 bg-gradient-to-br from-rose-50 to-rose-100/50 rounded-2xl">
+                        <div className="flex items-center justify-center gap-1 mb-1">
+                          <Flame className="w-4 h-4 text-rose-500" />
+                        </div>
+                        <div className="text-xl font-bold text-clay-800">{exerciseStats?.streakDays || 0}</div>
+                        <div className="text-[10px] text-clay-500">连续天数</div>
+                      </div>
+                      <div className="text-center p-3 bg-gradient-to-br from-lavender-50 to-lavender-100/50 rounded-2xl">
+                        <div className="flex items-center justify-center gap-1 mb-1">
+                          <Clock className="w-4 h-4 text-lavender-500" />
+                        </div>
+                        <div className="text-xl font-bold text-clay-800">{exerciseStats?.totalDuration || 0}</div>
+                        <div className="text-[10px] text-clay-500">累计分钟</div>
+                      </div>
+                      <div className="text-center p-3 bg-gradient-to-br from-sage-50 to-sage-100/50 rounded-2xl">
+                        <div className="flex items-center justify-center gap-1 mb-1">
+                          <CalendarDays className="w-4 h-4 text-sage-500" />
+                        </div>
+                        <div className="text-xl font-bold text-clay-800">{activityEffect?.attendedActivitiesCount || 0}</div>
+                        <div className="text-[10px] text-clay-500">活动参与</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-            <div className="mt-auto p-4 bg-gradient-to-r from-sage-50 to-lavender-50 rounded-2xl border border-sage-100/50">
-              <p className="text-sm text-clay-700 font-medium flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-sunset-500" />
-                {getEncouragement(exerciseStats?.streakDays || 0)}
-              </p>
-            </div>
+                <div className="mb-4">
+                  <p className="text-sm text-clay-500 mb-3">近4周练习趋势</p>
+                  <div className="h-20">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={exerciseStats?.weeklyTrend || []} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="miniTrendGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#B55359" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#B55359" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="week" hide />
+                        <YAxis hide />
+                        <Area
+                          type="monotone"
+                          dataKey="count"
+                          stroke="#B55359"
+                          strokeWidth={2}
+                          fill="url(#miniTrendGradient)"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                <div className="mt-auto p-4 bg-gradient-to-r from-sage-50 to-lavender-50 rounded-2xl border border-sage-100/50">
+                  <p className="text-sm text-clay-700 font-medium flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-sunset-500" />
+                    {getEncouragement(exerciseStats?.streakDays || 0)}
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -700,128 +725,154 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <p className="text-sm text-clay-500 mb-3">近3次自测分数变化</p>
-              <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={activityEffect?.assessmentTrend || []} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-                    <defs>
-                      <linearGradient id="healthTrendGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#4E7745" stopOpacity={0.2} />
-                        <stop offset="95%" stopColor="#4E7745" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#F0E7E2" vertical={false} />
-                    <XAxis dataKey="date" tick={{ fill: '#8F6D5F', fontSize: 12 }} axisLine={{ stroke: '#E0CCC2' }} tickLine={false} />
-                    <YAxis tick={{ fill: '#8F6D5F', fontSize: 12 }} axisLine={false} tickLine={false} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'white',
-                        border: '1px solid #E0CCC2',
-                        borderRadius: '12px',
-                        boxShadow: '0 4px 12px rgba(143,109,95,0.1)',
-                      }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="score"
-                      stroke="#4E7745"
-                      strokeWidth={3}
-                      dot={{ r: 6, fill: 'white', stroke: '#4E7745', strokeWidth: 2 }}
-                      activeDot={{ r: 8 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+          {!activityEffect?.assessmentTrend || activityEffect.assessmentTrend.length < 2 ? (
+            <div className="py-8 md:py-12">
+              <div className="max-w-md mx-auto text-center">
+                <div className="relative w-24 h-24 mx-auto mb-6">
+                  <div className="absolute inset-0 rounded-full border-2 border-dashed border-sage-200" />
+                  <div className="absolute inset-3 rounded-full bg-gradient-to-br from-sage-50 to-warm-50 flex items-center justify-center">
+                    <ClipboardList className="w-10 h-10 text-sage-400" strokeWidth={1.5} />
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-clay-800 mb-3">还没有自测记录</h3>
+                <p className="text-clay-500 leading-relaxed mb-6">
+                  {activityEffect?.assessmentTrend?.length === 1
+                    ? '完成至少2次自测，就能在这里看到您的健康变化趋势'
+                    : '完成一次健康自测，就能在这里看到您的健康变化趋势'}
+                </p>
+                <Link
+                  to="/assessment"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-sage-400 to-lavender-400 text-white font-medium shadow-lg shadow-sage-200/50 hover:shadow-xl hover:shadow-sage-200/60 hover:scale-[1.02] transition-all"
+                >
+                  去自测
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
               </div>
             </div>
-
-            <div className="flex flex-col gap-4">
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-sage-50 to-lavender-50 border border-sage-100/50">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sage-200 to-sage-300 flex items-center justify-center">
-                    <Star className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-clay-500">活动满意度平均分</p>
-                    <p className="text-2xl font-bold text-clay-900">
-                      {activityEffect?.averageRating || 0}
-                      <span className="text-lg text-clay-400 ml-1">/ 5</span>
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-1">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      className={cn(
-                        'w-5 h-5',
-                        star <= (activityEffect?.averageRating || 0)
-                          ? 'text-sunset-400 fill-sunset-400'
-                          : 'text-clay-200',
-                      )}
-                    />
-                  ))}
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <p className="text-sm text-clay-500 mb-3">近3次自测分数变化</p>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={activityEffect.assessmentTrend} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                      <defs>
+                        <linearGradient id="healthTrendGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#4E7745" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="#4E7745" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#F0E7E2" vertical={false} />
+                      <XAxis dataKey="date" tick={{ fill: '#8F6D5F', fontSize: 12 }} axisLine={{ stroke: '#E0CCC2' }} tickLine={false} />
+                      <YAxis tick={{ fill: '#8F6D5F', fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'white',
+                          border: '1px solid #E0CCC2',
+                          borderRadius: '12px',
+                          boxShadow: '0 4px 12px rgba(143,109,95,0.1)',
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="score"
+                        stroke="#4E7745"
+                        strokeWidth={3}
+                        dot={{ r: 6, fill: 'white', stroke: '#4E7745', strokeWidth: 2 }}
+                        activeDot={{ r: 8 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
 
-              {activityEffect && (() => {
-                const trend = activityEffect.assessmentTrend
-                const hasImprovement = trend.length >= 2 && trend[trend.length - 1].score < trend[0].score
-                const improvement = trend.length >= 2 ? trend[0].score - trend[trend.length - 1].score : 0
+              <div className="flex flex-col gap-4">
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-sage-50 to-lavender-50 border border-sage-100/50">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sage-200 to-sage-300 flex items-center justify-center">
+                      <Star className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-clay-500">活动满意度平均分</p>
+                      <p className="text-2xl font-bold text-clay-900">
+                        {activityEffect?.averageRating || 0}
+                        <span className="text-lg text-clay-400 ml-1">/ 5</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={cn(
+                          'w-5 h-5',
+                          star <= (activityEffect?.averageRating || 0)
+                            ? 'text-sunset-400 fill-sunset-400'
+                            : 'text-clay-200',
+                        )}
+                      />
+                    ))}
+                  </div>
+                </div>
 
-                return (
-                  <div className={cn(
-                    'p-4 rounded-2xl border flex-1',
-                    hasImprovement
-                      ? 'bg-gradient-to-r from-sage-50 to-sage-100/50 border-sage-200'
-                      : 'bg-gradient-to-r from-rose-50 to-lavender-50 border-rose-200',
-                  )}>
+                {activityEffect && (() => {
+                  const trend = activityEffect.assessmentTrend
+                  const hasImprovement = trend.length >= 2 && trend[trend.length - 1].score < trend[0].score
+                  const improvement = trend.length >= 2 ? trend[0].score - trend[trend.length - 1].score : 0
+
+                  return (
+                    <div className={cn(
+                      'p-4 rounded-2xl border flex-1',
+                      hasImprovement
+                        ? 'bg-gradient-to-r from-sage-50 to-sage-100/50 border-sage-200'
+                        : 'bg-gradient-to-r from-rose-50 to-lavender-50 border-rose-200',
+                    )}>
+                      <div className="flex items-start gap-3">
+                        {hasImprovement ? (
+                          <TrendingUp className="w-5 h-5 text-sage-500 flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <TrendingDown className="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5" />
+                        )}
+                        <div>
+                          <p className={cn(
+                            'font-bold mb-1',
+                            hasImprovement ? 'text-sage-700' : 'text-rose-700',
+                          )}>
+                            {hasImprovement ? '继续保持！' : '温馨提醒'}
+                          </p>
+                          <p className="text-sm text-clay-600">
+                            {hasImprovement
+                              ? `你的自测分数下降了 ${improvement} 分，健康状况在改善！`
+                              : '最近自测分数没有明显改善，建议增加练习频率或报名相关活动。'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                {activityEffect?.pendingFeedbackCount && activityEffect.pendingFeedbackCount > 0 && (
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-sunset-50 to-rose-50 border border-sunset-200">
                     <div className="flex items-start gap-3">
-                      {hasImprovement ? (
-                        <TrendingUp className="w-5 h-5 text-sage-500 flex-shrink-0 mt-0.5" />
-                      ) : (
-                        <TrendingDown className="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5" />
-                      )}
+                      <Sparkles className="w-5 h-5 text-sunset-500 flex-shrink-0 mt-0.5" />
                       <div>
-                        <p className={cn(
-                          'font-bold mb-1',
-                          hasImprovement ? 'text-sage-700' : 'text-rose-700',
-                        )}>
-                          {hasImprovement ? '继续保持！' : '温馨提醒'}
+                        <p className="font-bold text-sunset-700 mb-1">
+                          有 {activityEffect.pendingFeedbackCount} 个活动待评价
                         </p>
-                        <p className="text-sm text-clay-600">
-                          {hasImprovement
-                            ? `你的自测分数下降了 ${improvement} 分，健康状况在改善！`
-                            : '最近自测分数没有明显改善，建议增加练习频率或报名相关活动。'}
-                        </p>
+                        <Link
+                          to="/my-activities"
+                          className="text-sm text-rose-600 hover:text-rose-700 font-medium inline-flex items-center gap-1"
+                        >
+                          去评价
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </Link>
                       </div>
                     </div>
                   </div>
-                )
-              })()}
-
-              {activityEffect?.pendingFeedbackCount && activityEffect.pendingFeedbackCount > 0 && (
-                <div className="p-4 rounded-2xl bg-gradient-to-r from-sunset-50 to-rose-50 border border-sunset-200">
-                  <div className="flex items-start gap-3">
-                    <Sparkles className="w-5 h-5 text-sunset-500 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-bold text-sunset-700 mb-1">
-                        有 {activityEffect.pendingFeedbackCount} 个活动待评价
-                      </p>
-                      <Link
-                        to="/my-activities"
-                        className="text-sm text-rose-600 hover:text-rose-700 font-medium inline-flex items-center gap-1"
-                      >
-                        去评价
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

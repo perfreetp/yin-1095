@@ -4,8 +4,9 @@ import {
   Shield, ArrowLeft, RotateCcw, Moon, Flower2, Lightbulb,
   Clock, BookOpen, Heart, Activity, Calendar, ArrowRight,
   HandHeart, Sparkles, Leaf, Target, Coffee, AlertTriangle,
-  Flame, Zap, Droplets,
+  Flame, Zap, Droplets, Lock,
 } from 'lucide-react'
+import { useAppStore } from '@/stores/appStore'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend,
@@ -244,14 +245,28 @@ function RecommendedProgramCard({ program, idx }: { program: CareProgramRecommen
 export default function AssessmentResult() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user } = useAppStore()
   const [data, setData] = useState<ResultData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isForbidden, setIsForbidden] = useState(false)
+  const [notFound, setNotFound] = useState(false)
 
   useEffect(() => {
     const fetchResult = async () => {
+      if (!user) return
       try {
-        const res = await fetch(`/api/assessment/result/${id}`)
+        const res = await fetch(`/api/assessment/result/${id}?userId=${user.id}`)
+        if (res.status === 403) {
+          setIsForbidden(true)
+          setLoading(false)
+          return
+        }
+        if (res.status === 404) {
+          setNotFound(true)
+          setLoading(false)
+          return
+        }
         const result = await res.json()
         if (result.success) {
           setData(result.data)
@@ -266,7 +281,7 @@ export default function AssessmentResult() {
       }
     }
     fetchResult()
-  }, [id])
+  }, [id, user])
 
   if (loading) {
     return (
@@ -276,17 +291,64 @@ export default function AssessmentResult() {
     )
   }
 
-  if (error || !data) {
+  if (isForbidden) {
     return (
-      <div className="min-h-[400px] rounded-2xl border border-rose-100 bg-white/50 flex flex-col items-center justify-center gap-4">
-        <AlertTriangle className="w-12 h-12 text-rose-400" strokeWidth={1.5} />
-        <p className="text-clay-600 font-medium">{error || '报告不存在'}</p>
-        <button
-          onClick={() => navigate('/assessment')}
-          className="px-5 py-2 rounded-full bg-gradient-to-r from-rose-300 to-lavender-300 text-white text-sm font-medium hover:shadow-md transition-all"
-        >
-          返回自测中心
-        </button>
+      <div className="min-h-[500px] flex items-center justify-center p-4">
+        <div className="max-w-md w-full rounded-3xl bg-white border border-rose-100 shadow-xl shadow-rose-100/30 p-8 md:p-10 text-center">
+          <div className="relative w-24 h-24 mx-auto mb-6">
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-rose-100 to-lavender-100 animate-pulse" />
+            <div className="absolute inset-2 rounded-full bg-white flex items-center justify-center shadow-inner">
+              <Lock className="w-10 h-10 text-rose-400" strokeWidth={1.8} />
+            </div>
+          </div>
+          <h2 className="text-2xl font-bold text-clay-800 mb-3">您无权查看此报告</h2>
+          <p className="text-clay-500 leading-relaxed mb-8">
+            这份报告属于其他员工，为保护隐私，您只能查看自己的自测报告。
+            所有健康数据均采用端到端加密存储，确保每个人的隐私安全。
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button
+              onClick={() => navigate('/assessment')}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-rose-400 to-lavender-400 text-white font-medium shadow-lg shadow-rose-200/50 hover:shadow-xl hover:shadow-rose-200/60 hover:scale-[1.02] transition-all"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              返回自测中心
+            </button>
+          </div>
+          <div className="mt-8 pt-6 border-t border-clay-100">
+            <div className="flex items-center justify-center gap-2 text-xs text-clay-400">
+              <Shield className="w-4 h-4" strokeWidth={1.8} />
+              <span>隐私保护 · 数据加密 · 仅本人可见</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (notFound || error || !data) {
+    return (
+      <div className="min-h-[500px] flex items-center justify-center p-4">
+        <div className="max-w-md w-full rounded-3xl bg-white border border-clay-100 shadow-lg shadow-clay-100/30 p-8 md:p-10 text-center">
+          <div className="relative w-24 h-24 mx-auto mb-6">
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-clay-100 to-warm-100" />
+            <div className="absolute inset-2 rounded-full bg-white flex items-center justify-center shadow-inner">
+              <AlertTriangle className="w-10 h-10 text-warm-400" strokeWidth={1.8} />
+            </div>
+          </div>
+          <h2 className="text-2xl font-bold text-clay-800 mb-3">报告不存在</h2>
+          <p className="text-clay-500 leading-relaxed mb-8">
+            您要查看的自测报告可能已被删除或不存在。
+            您可以前往自测中心完成一次新的健康评估。
+          </p>
+          <button
+            onClick={() => navigate('/assessment')}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-lavender-400 to-rose-400 text-white font-medium shadow-lg shadow-lavender-200/50 hover:shadow-xl hover:shadow-lavender-200/60 hover:scale-[1.02] transition-all"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            返回自测中心
+          </button>
+        </div>
       </div>
     )
   }

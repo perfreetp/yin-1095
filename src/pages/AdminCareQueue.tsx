@@ -190,26 +190,8 @@ export default function AdminCareQueue() {
       }).then((r) => r.json())
 
       if (res.success) {
-        setQueue((prev) =>
-          prev.map((item) =>
-            item.id === selectedItem.id
-              ? {
-                  ...item,
-                  status: newStatus,
-                  processingNotes,
-                  updatedAt: new Date().toISOString(),
-                  timeline: res.data.apply.timeline,
-                }
-              : item,
-          ),
-        )
-        setStats((prev) => {
-          const newStats = { ...prev }
-          newStats[selectedItem.status]--
-          newStats[newStatus]++
-          return newStats
-        })
         setShowStatusModal(false)
+        fetchData()
       }
     } catch (e) {
       console.error('更新状态失败', e)

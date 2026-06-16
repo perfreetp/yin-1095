@@ -88,6 +88,7 @@ export interface ActivityRegistration {
   userId: string
   registeredAt: string
   status: 'registered' | 'cancelled' | 'attended'
+  feedbackSubmitted?: boolean
 }
 
 export type ResourceCategory = 'sleep' | 'hormone' | 'emotion' | 'nutrition'

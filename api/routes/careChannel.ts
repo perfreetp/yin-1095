@@ -9,9 +9,6 @@ import type {
 
 const router = Router()
 
-const careChannelApplies: CareChannelApply[] = []
-let anonymousCodeCounter = 1
-
 function generateUUID(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0
@@ -21,9 +18,16 @@ function generateUUID(): string {
 }
 
 function generateAnonymousCode(): string {
-  const code = `ANO-${String(anonymousCodeCounter).padStart(3, '0')}`
-  anonymousCodeCounter++
-  return code
+  let maxNum = 0
+  mockData.careChannelApplies.forEach((apply) => {
+    const match = apply.anonymousCode.match(/ANO-(\d+)/)
+    if (match) {
+      const num = parseInt(match[1], 10)
+      if (num > maxNum) maxNum = num
+    }
+  })
+  const nextNum = maxNum + 1
+  return `ANO-${String(nextNum).padStart(3, '0')}`
 }
 
 function generateSymptomTags(programTitle: string): string[] {
@@ -38,6 +42,26 @@ function generateSymptomTags(programTitle: string): string[] {
     tags.push('多重症状', '睡眠障碍', '情绪波动')
   }
   return tags.slice(0, 3)
+}
+
+function formatContactPreference(pref: ContactPreference): string {
+  const map: Record<ContactPreference, string> = {
+    phone: '电话',
+    message: '企业微信',
+    email: '邮件',
+    none: '未设置',
+  }
+  return map[pref] || '未设置'
+}
+
+function formatPreferredTime(times: PreferredTime[]): string {
+  const map: Record<PreferredTime, string> = {
+    weekday_morning: '工作日上午',
+    weekday_afternoon: '工作日下午',
+    weekday_evening: '工作日晚上',
+    weekend: '周末',
+  }
+  return times.map((t) => map[t] || t).join('、') || '未设置'
 }
 
 function generateAdminTimeline(apply: CareChannelApply) {
@@ -80,7 +104,7 @@ router.get('/programs', async (req: Request, res: Response): Promise<void> => {
       let applyStatus: string | null = null
 
       if (userId) {
-        const existingApply = careChannelApplies.find(
+        const existingApply = mockData.careChannelApplies.find(
           (a) => a.programId === program.id && a.userId === userId,
         )
         if (existingApply) {
@@ -120,7 +144,7 @@ router.get('/my-applications', async (req: Request, res: Response): Promise<void
       return
     }
 
-    const userApplies = careChannelApplies.filter((a) => a.userId === userId)
+    const userApplies = mockData.careChannelApplies.filter((a) => a.userId === userId)
 
     const result = userApplies.map((apply) => {
       const program = mockData.carePrograms.find((p) => p.id === apply.programId)
@@ -186,7 +210,7 @@ router.post('/apply', async (req: Request, res: Response): Promise<void> => {
       return
     }
 
-    const existingApply = careChannelApplies.find(
+    const existingApply = mockData.careChannelApplies.find(
       (a) => a.programId === programId && a.userId === userId,
     )
     if (existingApply) {
@@ -214,7 +238,7 @@ router.post('/apply', async (req: Request, res: Response): Promise<void> => {
       symptomTags: generateSymptomTags(program.title),
     }
 
-    careChannelApplies.push(applyRecord)
+    mockData.careChannelApplies.push(applyRecord)
 
     res.status(200).json({
       success: true,
@@ -247,7 +271,7 @@ router.get('/admin/queue', async (req: Request, res: Response): Promise<void> =>
   try {
     const { programId, status } = req.query
 
-    let filteredApplies = [...careChannelApplies]
+    let filteredApplies = [...mockData.careChannelApplies]
 
     if (programId && programId !== 'all') {
       filteredApplies = filteredApplies.filter((a) => a.programId === programId)
@@ -260,25 +284,24 @@ router.get('/admin/queue', async (req: Request, res: Response): Promise<void> =>
       const program = mockData.carePrograms.find((p) => p.id === apply.programId)
       return {
         id: apply.id,
-        programId: apply.programId,
-        programTitle: program?.title || '未知项目',
-        appliedAt: apply.appliedAt,
-        status: apply.status,
         anonymousCode: apply.anonymousCode,
-        preferredTime: apply.preferredTime,
-        contactPreference: apply.contactPreference,
+        programTitle: program?.title || '未知项目',
+        status: apply.status,
+        appliedAt: apply.appliedAt,
+        updatedAt: apply.updatedAt,
+        contactPreference: formatContactPreference(apply.contactPreference),
+        preferredTime: formatPreferredTime(apply.preferredTime),
         additionalNotes: apply.additionalNotes,
         symptomTags: apply.symptomTags || [],
-        updatedAt: apply.updatedAt,
       }
     })
 
-    const pendingCount = careChannelApplies.filter((a) => a.status === 'pending').length
-    const processingCount = careChannelApplies.filter((a) => a.status === 'processing').length
-    const completedCount = careChannelApplies.filter((a) => a.status === 'completed').length
+    const pendingCount = mockData.careChannelApplies.filter((a) => a.status === 'pending').length
+    const processingCount = mockData.careChannelApplies.filter((a) => a.status === 'processing').length
+    const completedCount = mockData.careChannelApplies.filter((a) => a.status === 'completed').length
 
     let avgResponseTime = 0
-    const completedWithProcessing = careChannelApplies.filter(
+    const completedWithProcessing = mockData.careChannelApplies.filter(
       (a) => a.status !== 'pending',
     )
     if (completedWithProcessing.length > 0) {
@@ -314,7 +337,7 @@ router.get('/admin/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params
 
-    const apply = careChannelApplies.find((a) => a.id === id)
+    const apply = mockData.careChannelApplies.find((a) => a.id === id)
     if (!apply) {
       res.status(404).json({
         success: false,
@@ -328,8 +351,17 @@ router.get('/admin/:id', async (req: Request, res: Response): Promise<void> => {
     res.status(200).json({
       success: true,
       data: {
-        ...apply,
+        id: apply.id,
+        anonymousCode: apply.anonymousCode,
         programTitle: program?.title,
+        status: apply.status,
+        appliedAt: apply.appliedAt,
+        updatedAt: apply.updatedAt,
+        contactPreference: formatContactPreference(apply.contactPreference),
+        preferredTime: formatPreferredTime(apply.preferredTime),
+        additionalNotes: apply.additionalNotes,
+        processingNotes: apply.processingNotes,
+        symptomTags: apply.symptomTags || [],
         timeline: generateAdminTimeline(apply),
       },
     })
@@ -349,7 +381,7 @@ router.put('/admin/:id/status', async (req: Request, res: Response): Promise<voi
       processingNotes,
     }: { status: CareApplyStatus; processingNotes?: string } = req.body
 
-    const apply = careChannelApplies.find((a) => a.id === id)
+    const apply = mockData.careChannelApplies.find((a) => a.id === id)
     if (!apply) {
       res.status(404).json({
         success: false,
