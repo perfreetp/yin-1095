@@ -25,20 +25,19 @@ import {
 import type {
   CareApplyStatus,
   ContactPreference,
-  PreferredTime,
   CareProgram,
 } from '../../shared/types'
 import { cn } from '@/lib/utils'
 
 interface CareQueueItem {
   id: string
-  programId: string
+  programId?: string
   programTitle: string
   appliedAt: string
   status: CareApplyStatus
   anonymousCode: string
-  preferredTime: PreferredTime[]
-  contactPreference: ContactPreference
+  preferredTime: string[]
+  contactPreference: string
   additionalNotes: string
   symptomTags: string[]
   updatedAt: string
@@ -87,11 +86,42 @@ const contactPreferenceConfig: Record<ContactPreference, { label: string; icon: 
   none: { label: '暂未选择', icon: Lock },
 }
 
-const preferredTimeLabel: Record<PreferredTime, string> = {
+const preferredTimeLabel: Record<string, string> = {
   weekday_morning: '工作日上午',
   weekday_afternoon: '工作日下午',
   weekday_evening: '工作日傍晚',
   weekend: '周末',
+  '工作日上午': '工作日上午',
+  '工作日下午': '工作日下午',
+  '工作日傍晚': '工作日傍晚',
+  '工作日晚上': '工作日傍晚',
+  '周末': '周末',
+}
+
+function getSafeContactPreference(pref: string) {
+  const validPrefs: ContactPreference[] = ['phone', 'message', 'email', 'none']
+  if (validPrefs.includes(pref as ContactPreference)) {
+    return contactPreferenceConfig[pref as ContactPreference]
+  }
+  const cnMap: Record<string, { label: string; icon: typeof Phone }> = {
+    '电话': { label: '电话', icon: Phone },
+    '企业微信': { label: '企业微信', icon: MessageCircle },
+    '邮件': { label: '邮件', icon: Mail },
+    '未设置': { label: '暂未选择', icon: Lock },
+  }
+  if (cnMap[pref]) return cnMap[pref]
+  return { label: pref || '暂未选择', icon: Lock }
+}
+
+function getSafePreferredTimeDisplay(times: unknown): string {
+  if (!Array.isArray(times)) return '未指定时间'
+  if (times.length === 0) return '未指定时间'
+  return times
+    .map((t) => {
+      const strT = String(t)
+      return preferredTimeLabel[strT] || strT
+    })
+    .join('、')
 }
 
 function formatDate(iso: string) {
@@ -151,15 +181,26 @@ export default function AdminCareQueue() {
         fetch('/api/care-channel/programs').then((r) => r.json()),
       ])
 
-      if (queueRes.success) {
-        setQueue(queueRes.data.list)
-        setStats(queueRes.data.stats)
+      if (queueRes && queueRes.success && queueRes.data) {
+        setQueue(Array.isArray(queueRes.data.list) ? queueRes.data.list : [])
+        setStats({
+          pending: queueRes.data.stats?.pending || 0,
+          processing: queueRes.data.stats?.processing || 0,
+          completed: queueRes.data.stats?.completed || 0,
+          avgResponseTime: queueRes.data.stats?.avgResponseTime || 0,
+        })
+      } else {
+        setQueue([])
       }
-      if (programsRes.success) {
+      if (programsRes && programsRes.success && Array.isArray(programsRes.data)) {
         setPrograms(programsRes.data)
+      } else {
+        setPrograms([])
       }
     } catch (e) {
       console.error('获取关怀队列失败', e)
+      setQueue([])
+      setPrograms([])
     } finally {
       setLoading(false)
     }
@@ -190,6 +231,18 @@ export default function AdminCareQueue() {
       }).then((r) => r.json())
 
       if (res.success) {
+        setQueue((prev) =>
+          prev.map((item) =>
+            item.id === selectedItem.id
+              ? {
+                  ...item,
+                  status: newStatus,
+                  processingNotes,
+                  updatedAt: new Date().toISOString(),
+                }
+              : item,
+          ),
+        )
         setShowStatusModal(false)
         fetchData()
       }
@@ -358,13 +411,13 @@ export default function AdminCareQueue() {
             <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-sage-100 to-rose-100 flex items-center justify-center mx-auto mb-4">
               <Inbox className="w-10 h-10 text-sage-500" strokeWidth={1.5} />
             </div>
-            <h3 className="text-lg font-semibold text-clay-700">暂无申请数据</h3>
+            <h3 className="text-lg font-semibold text-clay-700">暂无符合条件的申请</h3>
             <p className="text-sm text-clay-500 mt-2">尝试调整筛选条件查看更多结果</p>
           </div>
         ) : (
           queue.map((item) => {
-            const stCfg = statusConfig[item.status]
-            const contactCfg = contactPreferenceConfig[item.contactPreference]
+            const stCfg = statusConfig[item.status] || statusConfig.pending
+            const contactCfg = getSafeContactPreference(item.contactPreference)
             const ContactIcon = contactCfg.icon
             const isExpanded = expandedId === item.id
 
@@ -425,7 +478,7 @@ export default function AdminCareQueue() {
                       </div>
 
                       <div className="flex items-center gap-2 mb-3 flex-wrap">
-                        {item.symptomTags.map((tag, tIdx) => (
+                        {Array.isArray(item.symptomTags) && item.symptomTags.map((tag, tIdx) => (
                           <span
                             key={tIdx}
                             className="px-2 py-1 rounded-lg text-xs font-medium bg-clay-100 text-clay-600 border border-clay-200"
@@ -441,9 +494,7 @@ export default function AdminCareQueue() {
                           'bg-lavender-50 text-lavender-700 border-lavender-200',
                         )}>
                           <Clock className="w-3 h-3" strokeWidth={1.8} />
-                          {item.preferredTime.length > 0
-                            ? item.preferredTime.map((t) => preferredTimeLabel[t]).join('、')
-                            : '未指定时间'}
+                          {getSafePreferredTimeDisplay(item.preferredTime)}
                         </span>
                         <span className={cn(
                           'inline-flex items-center gap-1 px-2 py-1 rounded-lg border',

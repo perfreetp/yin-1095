@@ -860,7 +860,7 @@ export default function Home() {
                           有 {activityEffect.pendingFeedbackCount} 个活动待评价
                         </p>
                         <Link
-                          to="/my-activities"
+                          to="/activities/my?tab=attended"
                           className="text-sm text-rose-600 hover:text-rose-700 font-medium inline-flex items-center gap-1"
                         >
                           去评价

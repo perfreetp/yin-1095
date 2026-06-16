@@ -54,14 +54,14 @@ function formatContactPreference(pref: ContactPreference): string {
   return map[pref] || '未设置'
 }
 
-function formatPreferredTime(times: PreferredTime[]): string {
+function formatPreferredTime(times: PreferredTime[]): string[] {
   const map: Record<PreferredTime, string> = {
     weekday_morning: '工作日上午',
     weekday_afternoon: '工作日下午',
-    weekday_evening: '工作日晚上',
+    weekday_evening: '工作日傍晚',
     weekend: '周末',
   }
-  return times.map((t) => map[t] || t).join('、') || '未设置'
+  return times.map((t) => map[t] || t)
 }
 
 function generateAdminTimeline(apply: CareChannelApply) {
@@ -93,6 +93,24 @@ function generateAdminTimeline(apply: CareChannelApply) {
   }
 
   return timeline
+}
+
+function sanitizeAdminApply(apply: CareChannelApply) {
+  const program = mockData.carePrograms.find((p) => p.id === apply.programId)
+  return {
+    id: apply.id,
+    anonymousCode: apply.anonymousCode,
+    programTitle: program?.title || '未知项目',
+    status: apply.status,
+    appliedAt: apply.appliedAt,
+    updatedAt: apply.updatedAt,
+    contactPreference: formatContactPreference(apply.contactPreference),
+    preferredTime: formatPreferredTime(apply.preferredTime),
+    additionalNotes: apply.additionalNotes,
+    processingNotes: apply.processingNotes,
+    symptomTags: apply.symptomTags || [],
+    timeline: generateAdminTimeline(apply),
+  }
 }
 
 router.get('/programs', async (req: Request, res: Response): Promise<void> => {
@@ -280,21 +298,7 @@ router.get('/admin/queue', async (req: Request, res: Response): Promise<void> =>
       filteredApplies = filteredApplies.filter((a) => a.status === status)
     }
 
-    const result = filteredApplies.map((apply) => {
-      const program = mockData.carePrograms.find((p) => p.id === apply.programId)
-      return {
-        id: apply.id,
-        anonymousCode: apply.anonymousCode,
-        programTitle: program?.title || '未知项目',
-        status: apply.status,
-        appliedAt: apply.appliedAt,
-        updatedAt: apply.updatedAt,
-        contactPreference: formatContactPreference(apply.contactPreference),
-        preferredTime: formatPreferredTime(apply.preferredTime),
-        additionalNotes: apply.additionalNotes,
-        symptomTags: apply.symptomTags || [],
-      }
-    })
+    const result = filteredApplies.map((apply) => sanitizeAdminApply(apply))
 
     const pendingCount = mockData.careChannelApplies.filter((a) => a.status === 'pending').length
     const processingCount = mockData.careChannelApplies.filter((a) => a.status === 'processing').length
@@ -346,24 +350,9 @@ router.get('/admin/:id', async (req: Request, res: Response): Promise<void> => {
       return
     }
 
-    const program = mockData.carePrograms.find((p) => p.id === apply.programId)
-
     res.status(200).json({
       success: true,
-      data: {
-        id: apply.id,
-        anonymousCode: apply.anonymousCode,
-        programTitle: program?.title,
-        status: apply.status,
-        appliedAt: apply.appliedAt,
-        updatedAt: apply.updatedAt,
-        contactPreference: formatContactPreference(apply.contactPreference),
-        preferredTime: formatPreferredTime(apply.preferredTime),
-        additionalNotes: apply.additionalNotes,
-        processingNotes: apply.processingNotes,
-        symptomTags: apply.symptomTags || [],
-        timeline: generateAdminTimeline(apply),
-      },
+      data: sanitizeAdminApply(apply),
     })
   } catch (_error) {
     res.status(500).json({
@@ -396,15 +385,11 @@ router.put('/admin/:id/status', async (req: Request, res: Response): Promise<voi
       apply.processingNotes = processingNotes
     }
 
+    const sanitizedData = sanitizeAdminApply(apply)
+
     res.status(200).json({
       success: true,
-      data: {
-        message: '状态更新成功',
-        apply: {
-          ...apply,
-          timeline: generateAdminTimeline(apply),
-        },
-      },
+      data: sanitizedData,
     })
   } catch (_error) {
     res.status(500).json({

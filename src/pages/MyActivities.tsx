@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   CalendarDays,
   MapPin,
@@ -40,6 +40,7 @@ interface FeedbackState {
   submitting: boolean
   showThankYou: boolean
   hasSubmitted: Set<string>
+  showErrors: boolean
 }
 
 const typeConfig: Record<
@@ -105,8 +106,11 @@ function formatDateTime(iso: string) {
 
 export default function MyActivities() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { user } = useAppStore()
-  const [activeTab, setActiveTab] = useState<TabKey>('registered')
+  const tabFromUrl = searchParams.get('tab')
+  const initialTab: TabKey = tabFromUrl === 'attended' || tabFromUrl === 'cancelled' || tabFromUrl === 'registered' ? tabFromUrl : 'registered'
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab)
   const [items, setItems] = useState<MyActivityItem[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -116,6 +120,7 @@ export default function MyActivities() {
     submitting: false,
     showThankYou: false,
     hasSubmitted: new Set<string>(),
+    showErrors: false,
   })
   const [feedbackForm, setFeedbackForm] = useState<FeedbackFormData>({
     rating: 0,
@@ -136,6 +141,7 @@ export default function MyActivities() {
       showModal: true,
       activity,
       showThankYou: false,
+      showErrors: false,
     })
   }
 
@@ -174,7 +180,7 @@ export default function MyActivities() {
   const handleSubmitFeedback = async () => {
     if (!user || !feedbackState.activity) return
     if (feedbackForm.rating === 0 || feedbackForm.contentPracticality === 0 || feedbackForm.wouldRecommend === null) {
-      alert('请完成所有评分项')
+      setFeedbackState({ ...feedbackState, showErrors: true })
       return
     }
 
@@ -616,6 +622,9 @@ export default function MyActivities() {
                         {feedbackForm.rating > 0 ? `${feedbackForm.rating} 分` : '请评分'}
                       </span>
                     </div>
+                    {feedbackState.showErrors && feedbackForm.rating === 0 && (
+                      <p className="mt-2 text-sm text-rose-500">请选择评分</p>
+                    )}
                   </div>
 
                   <div>
@@ -643,6 +652,9 @@ export default function MyActivities() {
                         {feedbackForm.contentPracticality > 0 ? `${feedbackForm.contentPracticality} 分` : '请评分'}
                       </span>
                     </div>
+                    {feedbackState.showErrors && feedbackForm.contentPracticality === 0 && (
+                      <p className="mt-2 text-sm text-rose-500">请选择内容实用性评分</p>
+                    )}
                   </div>
 
                   <div>
@@ -675,16 +687,19 @@ export default function MyActivities() {
                         不愿意
                       </button>
                     </div>
+                    {feedbackState.showErrors && feedbackForm.wouldRecommend === null && (
+                      <p className="mt-2 text-sm text-rose-500">请选择是否推荐</p>
+                    )}
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-clay-800 mb-3">
-                      建议和意见 <span className="text-clay-400">(选填)</span>
+                      文字建议 <span className="text-xs text-clay-400 font-normal ml-1">选填</span>
                     </label>
                     <textarea
                       value={feedbackForm.comment}
                       onChange={(e) => setFeedbackForm({ ...feedbackForm, comment: e.target.value })}
-                      placeholder="请分享您对本次活动的感受和建议..."
+                      placeholder="您的建议和意见（选填）"
                       rows={4}
                       className="w-full px-4 py-3 rounded-xl border-2 border-clay-200 text-clay-800 placeholder-clay-400 focus:border-lavender-400 focus:ring-0 outline-none resize-none transition-colors"
                     />

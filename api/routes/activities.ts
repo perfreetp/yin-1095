@@ -333,10 +333,10 @@ router.post('/:id/feedback', async (req: Request, res: Response): Promise<void> 
 
     const feedbackContent = content ?? comment
 
-    if (!userId || !rating || !feedbackContent) {
+    if (!userId || !rating || !contentPracticality || wouldRecommend === undefined || wouldRecommend === null) {
       res.status(400).json({
         success: false,
-        error: '用户ID、评分和反馈内容不能为空',
+        error: '用户ID、评分、内容实用性和是否推荐不能为空',
       })
       return
     }
@@ -349,7 +349,7 @@ router.post('/:id/feedback', async (req: Request, res: Response): Promise<void> 
       return
     }
 
-    if (contentPracticality !== undefined && (contentPracticality < 1 || contentPracticality > 5)) {
+    if (contentPracticality < 1 || contentPracticality > 5) {
       res.status(400).json({
         success: false,
         error: '内容实用性评分必须在1-5之间',
@@ -393,10 +393,10 @@ router.post('/:id/feedback', async (req: Request, res: Response): Promise<void> 
       activityId: id,
       userId,
       rating: Math.max(1, Math.min(5, rating)),
-      content: feedbackContent,
-      contentPracticality: contentPracticality !== undefined ? Math.max(1, Math.min(5, contentPracticality)) : undefined,
+      content: feedbackContent ?? '',
+      contentPracticality: Math.max(1, Math.min(5, contentPracticality)),
       submittedAt: new Date().toISOString(),
-      wouldRecommend: wouldRecommend ?? true,
+      wouldRecommend: wouldRecommend,
     }
 
     mockData.activityFeedbacks.push(feedback)
